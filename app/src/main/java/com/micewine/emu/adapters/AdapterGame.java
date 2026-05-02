@@ -70,8 +70,6 @@ public class AdapterGame extends RecyclerView.Adapter<AdapterGame.ViewHolder> {
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View itemView = LayoutInflater.from(parent.getContext()).inflate(R.layout.adapter_game_item, parent, false);
-        itemView.getLayoutParams().width = Math.round(itemView.getLayoutParams().width * size);
-        itemView.getLayoutParams().height = Math.round(itemView.getLayoutParams().height * size);
         return new ViewHolder(itemView);
     }
 
@@ -85,16 +83,11 @@ public class AdapterGame extends RecyclerView.Adapter<AdapterGame.ViewHolder> {
         if (imgFile.exists() && imgFile.length() > 0) {
             Bitmap imgBitmap = BitmapFactory.decodeFile(item.iconPath);
             if (imgBitmap != null) {
-                Bitmap newBitmap;
                 if (new File(item.exePath).exists()) {
-                    newBitmap = Bitmap.createScaledBitmap(imgBitmap, holder.itemView.getLayoutParams().width - 10,
-                            holder.itemView.getLayoutParams().width - 10, false);
+                    holder.gameImage.setImageBitmap(imgBitmap);
                 } else {
-                    newBitmap = toGrayScale(
-                            Bitmap.createScaledBitmap(imgBitmap, holder.itemView.getLayoutParams().width - 10,
-                                    holder.itemView.getLayoutParams().width - 10, false));
+                    holder.gameImage.setImageBitmap(toGrayScale(imgBitmap));
                 }
-                holder.gameImage.setImageBitmap(newBitmap);
             }
         } else if (item.iconPath.isEmpty()) {
             holder.gameImage.setImageBitmap(

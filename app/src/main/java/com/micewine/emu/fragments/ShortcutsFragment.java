@@ -79,7 +79,7 @@ public class ShortcutsFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
-            @Nullable Bundle savedInstanceState) {
+                             @Nullable Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_shortcuts, container, false);
         recyclerView = rootView.findViewById(R.id.recyclerViewGame);
 
@@ -91,15 +91,9 @@ public class ShortcutsFragment extends Fragment {
 
         initialize();
 
-        FlexboxLayoutManager layoutManager = new FlexboxLayoutManager(requireContext());
-
-        layoutManager.setFlexDirection(FlexDirection.ROW);
-        layoutManager.setJustifyContent(JustifyContent.CENTER);
-        layoutManager.setAlignItems(AlignItems.FLEX_START);
-        layoutManager.setFlexWrap(FlexWrap.WRAP);
+        androidx.recyclerview.widget.GridLayoutManager layoutManager = new androidx.recyclerview.widget.GridLayoutManager(requireContext(), 3);
 
         recyclerView.setLayoutManager(layoutManager);
-        recyclerView.addItemDecoration(new GridSpacingItemDecoration(10));
         recyclerView.setAdapter(new AdapterGame(gameList, 1F, requireActivity()));
 
         searchItem.setOnClickListener((v) -> {
@@ -156,14 +150,14 @@ public class ShortcutsFragment extends Fragment {
         ItemTouchHelper.Callback callback = new ItemTouchHelper.Callback() {
             @Override
             public int getMovementFlags(@NonNull RecyclerView recyclerView,
-                    @NonNull RecyclerView.ViewHolder viewHolder) {
+                                        @NonNull RecyclerView.ViewHolder viewHolder) {
                 int flags = ItemTouchHelper.UP | ItemTouchHelper.DOWN | ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT;
                 return makeMovementFlags(flags, 0);
             }
 
             @Override
             public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder,
-                    @NonNull RecyclerView.ViewHolder target) {
+                                  @NonNull RecyclerView.ViewHolder target) {
                 if (target.getAdapterPosition() == 0 || viewHolder.getAdapterPosition() == 0)
                     return false;
 
@@ -208,7 +202,7 @@ public class ShortcutsFragment extends Fragment {
 
     @Override
     public void onCreateContextMenu(@NonNull ContextMenu menu, @NonNull View v,
-            @Nullable ContextMenu.ContextMenuInfo menuInfo) {
+                                    @Nullable ContextMenu.ContextMenuInfo menuInfo) {
         super.onCreateContextMenu(menu, v, menuInfo);
 
         if (selectedGameName.equals(getString(R.string.desktop_mode_init))) {
@@ -251,7 +245,7 @@ public class ShortcutsFragment extends Fragment {
 
         @Override
         public void getItemOffsets(@NonNull Rect outRect, @NonNull View view, @NonNull RecyclerView parent,
-                @NonNull RecyclerView.State state) {
+                                   @NonNull RecyclerView.State state) {
             outRect.left = spacing;
             outRect.right = spacing;
             outRect.top = spacing;
