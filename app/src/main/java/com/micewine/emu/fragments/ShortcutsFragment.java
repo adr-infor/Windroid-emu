@@ -40,8 +40,11 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import android.content.res.Configuration;
 
 import com.google.android.flexbox.AlignItems;
 import com.google.android.flexbox.FlexDirection;
@@ -91,9 +94,8 @@ public class ShortcutsFragment extends Fragment {
 
         initialize();
 
-        androidx.recyclerview.widget.GridLayoutManager layoutManager = new androidx.recyclerview.widget.GridLayoutManager(requireContext(), 3);
+        updateLayoutManager(requireContext().getResources().getConfiguration().orientation);
 
-        recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(new AdapterGame(gameList, 1F, requireActivity()));
 
         searchItem.setOnClickListener((v) -> {
@@ -144,6 +146,26 @@ public class ShortcutsFragment extends Fragment {
         registerForContextMenu(recyclerView);
 
         return rootView;
+    }
+
+    @Override
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        updateLayoutManager(newConfig.orientation);
+    }
+
+    private void updateLayoutManager(int orientation) {
+        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            recyclerView.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
+        } else {
+            recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), 3));
+        }
+
+        recyclerView.getRecycledViewPool().clear();
+
+        if (recyclerView.getAdapter() != null) {
+            recyclerView.getAdapter().notifyDataSetChanged();
+        }
     }
 
     private void setupDragAndDrop() {

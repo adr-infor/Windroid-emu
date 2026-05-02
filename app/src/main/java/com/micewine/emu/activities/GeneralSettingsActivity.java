@@ -372,6 +372,12 @@ public class GeneralSettingsActivity extends AppCompatActivity {
     public final static String FRAMESKIP_4 = "4";
     public final static String FRAMESKIP_5 = "5";
 
+    public final static String SELECTED_WINE_FRAMESKIP = "selectedWineFrameSkip";
+    public final static String WINE_FRAMESKIP_0 = "0 (Off)";
+    public final static String WINE_FRAMESKIP_1 = "1";
+    public final static String WINE_FRAMESKIP_2 = "2";
+    public final static String WINE_FRAMESKIP_3 = "3";
+
     public final static String SUPER_RESOLUTION = "superResolution";
     public final static boolean SUPER_RESOLUTION_DEFAULT_VALUE = false;
 

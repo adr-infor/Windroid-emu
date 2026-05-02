@@ -54,6 +54,8 @@ import static com.micewine.emu.activities.GeneralSettingsActivity.WINE_LOG_LEVEL
 import static com.micewine.emu.activities.GeneralSettingsActivity.WINE_LOG_LEVEL_DEFAULT_VALUE;
 import static com.micewine.emu.activities.GeneralSettingsActivity.WINE_HIDE;
 import static com.micewine.emu.activities.GeneralSettingsActivity.WINE_HIDE_DEFAULT_VALUE;
+import static com.micewine.emu.activities.GeneralSettingsActivity.SELECTED_WINE_FRAMESKIP;
+import static com.micewine.emu.activities.GeneralSettingsActivity.WINE_FRAMESKIP_0;
 
 import static com.micewine.emu.activities.PresetManagerActivity.SELECTED_BOX64_PRESET;
 import static com.micewine.emu.activities.RatManagerActivity.generateICDFile;
@@ -1054,6 +1056,7 @@ public class MainActivity extends AppCompatActivity {
     public static boolean selectedSuperResolution = false;
     public static String wineFsrMode = null;
     public static int wineFsrSharpness = 0;
+    public static String selectedWineFrameSkip = null;
     public static String selectedColorProfile = null;
     public static int selectedFragmentId = 0;
     public static String memoryStats = "??/??";
@@ -1197,6 +1200,7 @@ public class MainActivity extends AppCompatActivity {
         selectedSuperResolution = preferences.getBoolean(SUPER_RESOLUTION, SUPER_RESOLUTION_DEFAULT_VALUE);
         wineFsrMode = preferences.getString(WINE_FSR_MODE, WINE_FSR_MODE_DEFAULT_VALUE);
         wineFsrSharpness = preferences.getInt(WINE_FSR_SHARPNESS, WINE_FSR_SHARPNESS_DEFAULT_VALUE);
+        selectedWineFrameSkip = preferences.getString(SELECTED_WINE_FRAMESKIP, WINE_FRAMESKIP_0);
         wineHide = preferences.getBoolean(WINE_HIDE, WINE_HIDE_DEFAULT_VALUE);
         selectedColorProfile = preferences.getString(COLOR_PROFILE, COLOR_PROFILE_DEFAULT_VALUE);
 

@@ -50,6 +50,11 @@ import static com.micewine.emu.activities.MainActivity.wineFsrMode;
 import static com.micewine.emu.activities.MainActivity.wineFsrSharpness;
 import static com.micewine.emu.activities.MainActivity.wineLogLevel;
 import static com.micewine.emu.activities.MainActivity.selectedSuperResolution;
+import static com.micewine.emu.activities.MainActivity.selectedWineFrameSkip;
+import static com.micewine.emu.activities.GeneralSettingsActivity.WINE_FRAMESKIP_0;
+import static com.micewine.emu.activities.GeneralSettingsActivity.WINE_FRAMESKIP_1;
+import static com.micewine.emu.activities.GeneralSettingsActivity.WINE_FRAMESKIP_2;
+import static com.micewine.emu.activities.GeneralSettingsActivity.WINE_FRAMESKIP_3;
 import static com.micewine.emu.adapters.AdapterGame.selectedGameName;
 import static com.micewine.emu.fragments.EnvVarsSettingsFragment.getCustomEnvVars;
 import static com.micewine.emu.fragments.ShortcutsFragment.getEnvVars;
@@ -148,6 +153,16 @@ public class EnvVars {
 
             vars.add("WINE_FULLSCREEN_FSR_MODE=" + fsrMode);
             vars.add("WINE_FULLSCREEN_FSR_SHARPNESS=" + wineFsrSharpness);
+        }
+
+        if (!selectedWineFrameSkip.equals(WINE_FRAMESKIP_0)) {
+            int skip = switch (selectedWineFrameSkip) {
+                case WINE_FRAMESKIP_1 -> 1;
+                case WINE_FRAMESKIP_2 -> 2;
+                case WINE_FRAMESKIP_3 -> 3;
+                default -> 0;
+            };
+            vars.add("WINE_FRAME_SKIP=" + skip);
         }
 
         vars.add("MANGOHUD=1");

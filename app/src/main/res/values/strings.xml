@@ -311,4 +311,6 @@
     <string name="wine_fsr_performance">Performance</string>
     <string name="wine_hide_title">Hide Wine</string>
     <string name="wine_hide_desc">Hides Wine-specific files and exports to help avoid anti-cheat detection</string>
+    <string name="wine_frameskip_title">Pulo de quadros nativo (Wine)</string>
+    <string name="wine_frameskip_desc">Pula quadros no driver de vídeo para máxima economia de CPU/GPU (recomendado)</string>
 </resources>
