@@ -263,4 +263,6 @@
         <item quantity="one">há %d ano</item>
         <item quantity="other">há %d anos</item>
     </plurals>
+    <string name="vulkan_bypass_title">Bypass Gráfico Híbrido</string>
+    <string name="vulkan_bypass_desc">Pula a camada X11 para renderização Vulkan direta na superfície Android (reduz latência)</string>
 </resources>

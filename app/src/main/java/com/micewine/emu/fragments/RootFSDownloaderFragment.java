@@ -142,6 +142,11 @@ public class RootFSDownloaderFragment extends Fragment {
 
             recyclerView.post(() -> {
                 RecyclerView.Adapter<?> adapter = recyclerView.getAdapter();
+
+                if (!rootFsList.isEmpty()) {
+                    AdapterRatPackage.selectedItemId = 0;
+                }
+
                 if (adapter != null) adapter.notifyDataSetChanged();
             });
         }).start();
@@ -188,17 +193,34 @@ public class RootFSDownloaderFragment extends Fragment {
 
     private List<RootFSPackage> fetchRootFS() {
         OkHttpClient client = new OkHttpClient();
-        Request request = new Request.Builder().url("https://api.github.com/repos/WINDROID-EMU/Windroid-RootFS-Generator/releases").build();
-        Type type = new TypeToken<List<GHRelease>>() {}.getType();
+        Request requestAll = new Request.Builder().url("https://api.github.com/repos/WINDROID-EMU/Windroid-RootFS-Generator/releases").build();
+        Request requestLatest = new Request.Builder().url("https://api.github.com/repos/WINDROID-EMU/Windroid-RootFS-Generator/releases/latest").build();
 
-        try (Response response = client.newCall(request).execute()) {
-            if (response.isSuccessful()) {
+        String latestTagName = "";
+
+        try (Response response = client.newCall(requestLatest).execute()) {
+            if (response.isSuccessful() && response.body() != null) {
+                GHRelease latest = gson.fromJson(response.body().string(), GHRelease.class);
+                latestTagName = latest.tag_name;
+            }
+        } catch (IOException ignored) {
+        }
+
+        try (Response response = client.newCall(requestAll).execute()) {
+            if (response.isSuccessful() && response.body() != null) {
+                Type type = new TypeToken<List<GHRelease>>() {}.getType();
                 List<GHRelease> releases = gson.fromJson(response.body().string(), type);
-                ArrayList<RootFSPackage> rootFSPackages = new ArrayList<>(releases.size());
+                ArrayList<RootFSPackage> rootFSPackages = new ArrayList<>();
 
-                if (!releases.isEmpty()) {
-                    GHRelease r = releases.get(0);
-                    rootFSPackages.add(new RootFSPackage(r.name, r.tag_name, timeAgo(r.published_at), Boolean.parseBoolean(r.prerelease)));
+                for (GHRelease r : releases) {
+                    boolean isPreRelease = Boolean.parseBoolean(r.prerelease);
+                    String name = r.name;
+
+                    if (r.tag_name.equals(latestTagName)) {
+                        name += " (Latest)";
+                    }
+
+                    rootFSPackages.add(new RootFSPackage(name, r.tag_name, timeAgo(r.published_at), isPreRelease));
                 }
 
                 return rootFSPackages;

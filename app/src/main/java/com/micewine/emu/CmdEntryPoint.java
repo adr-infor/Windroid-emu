@@ -171,6 +171,7 @@ public class CmdEntryPoint extends ICmdEntryInterface.Stub {
 
     public static native boolean start(String[] args);
     public native void windowChanged(Surface surface);
+    public native Surface getSurface();
     public native ParcelFileDescriptor getXConnection();
     public native ParcelFileDescriptor getLogcatOutput();
     private static native boolean connected();

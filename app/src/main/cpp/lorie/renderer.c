@@ -609,6 +609,15 @@ void renderer_set_window(JNIEnv *env, jobject new_surface) {
   pthread_mutex_unlock(&stateLock);
 }
 
+#if !RENDERER_IN_ACTIVITY
+jobject renderer_get_surface(void) {
+  pthread_mutex_lock(&stateLock);
+  jobject res = surface;
+  pthread_mutex_unlock(&stateLock);
+  return res;
+}
+#endif
+
 #if RENDERER_IN_ACTIVITY
 static inline __always_inline void
 release_win_and_surface(JNIEnv *env, ANativeWindow **anw, EGLSurface *esfc) {

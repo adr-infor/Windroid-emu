@@ -164,6 +164,16 @@ Java_com_micewine_emu_CmdEntryPoint_windowChanged(JNIEnv *env, __unused jobject 
 #endif
 }
 
+JNIEXPORT jobject JNICALL
+Java_com_micewine_emu_CmdEntryPoint_getSurface(JNIEnv *env, __unused jobject cls) {
+#if !RENDERER_IN_ACTIVITY
+    extern jobject renderer_get_surface(void);
+    return renderer_get_surface();
+#else
+    return NULL;
+#endif
+}
+
 static Bool sendConfigureNotify(__unused ClientPtr pClient, void *closure) {
     // This must be done only on X server thread.
     lorieEvent* e = closure;

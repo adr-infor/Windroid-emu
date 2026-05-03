@@ -108,6 +108,11 @@ public class WineWrapper {
                 true);
     }
 
+    public static void runVirtualAndroidTest() {
+        String testBin = ratPackagesDir + "/" + selectedWine + "/files/wine/lib/wine/x86_64-windows/ntdll_test.exe";
+        wine(testBin + " virtual_android");
+    }
+
     public static void killAll() {
         String wineserverBin = ratPackagesDir + "/" + selectedWine + "/files/wine/bin/wineserver";
 

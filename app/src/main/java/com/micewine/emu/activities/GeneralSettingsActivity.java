@@ -390,4 +390,7 @@ public class GeneralSettingsActivity extends AppCompatActivity {
 
     public final static String WINE_HIDE = "wineHide";
     public final static boolean WINE_HIDE_DEFAULT_VALUE = false;
+
+    public final static String WINDROID_USE_ANDROID_SURFACE = "WINDROID_USE_ANDROID_SURFACE";
+    public final static boolean WINDROID_USE_ANDROID_SURFACE_DEFAULT_VALUE = false;
 }

@@ -724,6 +724,10 @@ public class EmulationActivity extends AppCompatActivity implements View.OnApply
         return findViewById(R.id.lorieView);
     }
 
+    public Surface getSurface() {
+        return getLorieView().getHolder().getSurface();
+    }
+
     public boolean handleKey(KeyEvent e) {
         return mLorieKeyListener.onKey(getLorieView(), e.getKeyCode(), e);
     }
