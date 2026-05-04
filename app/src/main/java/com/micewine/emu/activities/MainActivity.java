@@ -56,6 +56,8 @@ import static com.micewine.emu.activities.GeneralSettingsActivity.WINE_HIDE;
 import static com.micewine.emu.activities.GeneralSettingsActivity.WINE_HIDE_DEFAULT_VALUE;
 import static com.micewine.emu.activities.GeneralSettingsActivity.SELECTED_WINE_FRAMESKIP;
 import static com.micewine.emu.activities.GeneralSettingsActivity.WINE_FRAMESKIP_0;
+import static com.micewine.emu.activities.GeneralSettingsActivity.WINDROID_USE_ANDROID_SURFACE;
+import static com.micewine.emu.activities.GeneralSettingsActivity.WINDROID_USE_ANDROID_SURFACE_DEFAULT_VALUE;
 
 import static com.micewine.emu.activities.PresetManagerActivity.SELECTED_BOX64_PRESET;
 import static com.micewine.emu.activities.RatManagerActivity.generateICDFile;
