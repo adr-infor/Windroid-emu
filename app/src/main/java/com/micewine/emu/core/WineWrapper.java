@@ -21,6 +21,16 @@ import java.util.List;
 public class WineWrapper {
     private static final String IS_BOX64 = deviceArch.equals("x86_64") ? "" : "box64";
 
+    /**
+     * Verifica se o comando é uma solicitação para abrir o WinetricksFragment.
+     * Isso é usado para interceptar cliques no atalho do winetricks no menu Iniciar.
+     */
+    public static boolean isWinetricksCommand(String args) {
+        if (args == null) return false;
+        String lowerArgs = args.toLowerCase();
+        return lowerArgs.contains("winetricks.bat") || lowerArgs.contains("winetricks.exe");
+    }
+
     public static String getCpuHexMask(String cpuAffinityMask) {
         int availCpus = Runtime.getRuntime().availableProcessors();
         List<Character> cpuMask = new ArrayList<>();

@@ -188,6 +188,7 @@ import com.micewine.emu.BuildConfig;
 import com.micewine.emu.R;
 import com.micewine.emu.adapters.AdapterBottomNavigation;
 import com.micewine.emu.controller.ControllerUtils;
+import com.micewine.emu.activities.GeneralSettingsActivity;
 import com.micewine.emu.core.RatPackageManager;
 import com.micewine.emu.core.WineWrapper;
 import com.micewine.emu.databinding.ActivityMainBinding;
@@ -784,6 +785,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void runWine(String exePath, String exeArguments) {
+        // Verificar se é um comando do winetricks (atalho do menu Iniciar)
+        if (WineWrapper.isWinetricksCommand(exePath)) {
+            runOnUiThread(() -> {
+                Intent intent = new Intent(MainActivity.this, GeneralSettingsActivity.class);
+                intent.setAction("com.micewine.emu.ACTION_PREFERENCE_SELECT");
+                intent.putExtra("preference", getString(R.string.winetricks_title));
+                startActivity(intent);
+            });
+            return;
+        }
+
         if (preferences.getBoolean(PERF_MODE_ROOT, false)) {
             RootUtils.applyPerformanceMode();
         }
