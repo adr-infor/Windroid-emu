@@ -205,12 +205,12 @@ static void lorieSwapTripleBuffers(void) {
   pvfb->root.frontIndex = pvfb->root.middleIndex;
   pvfb->root.middleIndex = oldBack;
   
-  // Notifica renderer sobre novo buffer disponível
-  if (pvfb->root.buffers[pvfb->root.middleIndex]) {
+  // Notifica renderer sobre o buffer que ACABOU de ser atualizado (agora é o front)
+  if (pvfb->root.buffers[pvfb->root.frontIndex]) {
     #if RENDERER_IN_ACTIVITY
-    lorieSendRootWindowBuffer(pvfb->root.buffers[pvfb->root.middleIndex]);
+    lorieSendRootWindowBuffer(pvfb->root.buffers[pvfb->root.frontIndex]);
     #else
-    renderer_set_buffer(pvfb->root.buffers[pvfb->root.middleIndex]);
+    renderer_set_buffer(pvfb->root.buffers[pvfb->root.frontIndex]);
     #endif
   }
 }
@@ -507,19 +507,17 @@ static Bool lorieRedraw(__unused ClientPtr pClient, __unused void *closure) {
   priv = lorieRootWindowPixmapPriv();
 
   if (nonEmpty && priv && priv->buffer) {
-    // Triple buffering: copiar conteúdo do buffer back para middle e fazer swap
-    LorieBuffer *backBuffer = pvfb->root.buffers[pvfb->root.backIndex];
     LorieBuffer *middleBuffer = pvfb->root.buffers[pvfb->root.middleIndex];
     
-    // Desbloquear buffer atual antes de copiar
+    // Desbloquear buffer atual antes de copiar (necessário para sincronização/DMA)
     LorieBuffer_unlock(priv->buffer);
     
-    // Copiar conteúdo atualizado para o buffer middle (pronto para render)
-    if (backBuffer && middleBuffer) {
-      LorieBuffer_copy(backBuffer, middleBuffer);
+    // Copiar conteúdo atualizado do buffer do X para o buffer middle (pronto para render)
+    if (priv->buffer && middleBuffer) {
+      LorieBuffer_copy(priv->buffer, middleBuffer);
     }
     
-    // Re-lock do buffer back para continuar recebendo updates do X
+    // Re-lock do buffer para continuar recebendo updates do X
     status = LorieBuffer_lock(priv->buffer, NULL, &priv->locked);
     if (status)
       FatalError("Failed to lock the surface: %d\n", status);
@@ -1027,11 +1025,8 @@ void lorieFinishAccess(PixmapPtr pPix, int index) {
 
 // Otimizações EXA: suporte a fills sólidos e flags melhoradas para GPU
 static Bool loriePrepareSolid(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel color) {
-  // Otimizado: permitir fills sólidos simples via GPU
-  // Retorna TRUE para operações simples de fill
-  if (alu == GXcopy && planemask == FB_ALLONES) {
-    return TRUE;
-  }
+  // Desativado: o driver ainda não implementa Solid corretamente
+  // Retornar FALSE força o X Server a usar o fallback de software
   return FALSE;
 }
 
