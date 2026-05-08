@@ -50,6 +50,8 @@ import static com.micewine.emu.activities.GeneralSettingsActivity.FRAMESKIP_4;
 import static com.micewine.emu.activities.GeneralSettingsActivity.FRAMESKIP_5;
 import static com.micewine.emu.activities.GeneralSettingsActivity.COLOR_PROFILE;
 import static com.micewine.emu.activities.GeneralSettingsActivity.COLOR_PROFILE_DEFAULT_VALUE;
+import static com.micewine.emu.activities.GeneralSettingsActivity.ENABLE_VIBRATION;
+import static com.micewine.emu.activities.GeneralSettingsActivity.ENABLE_VIBRATION_DEFAULT_VALUE;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -168,6 +170,10 @@ public class EmulationActivity extends AppCompatActivity implements View.OnApply
         }
 
         ControllerUtils.startInputServer();
+        ControllerUtils.nativeInitVibration();
+
+        boolean vibrationEnabled = preferences.getBoolean(ENABLE_VIBRATION, ENABLE_VIBRATION_DEFAULT_VALUE);
+        ControllerUtils.setVibrationEnabled(vibrationEnabled);
 
         ControllerUtils.setEnableXInputNative(getEnableXInput(selectedGameName));
         ControllerUtils.setEnableDInputNative(getEnableDInput(selectedGameName));
@@ -690,6 +696,10 @@ public class EmulationActivity extends AppCompatActivity implements View.OnApply
         else if (colorProfile.equals("Warm")) colorProfileId = 2;
         else if (colorProfile.equals("Cool")) colorProfileId = 3;
         lorieView.setColorProfile(colorProfileId);
+
+        // Update vibration setting
+        boolean vibrationEnabled = preferences.getBoolean(ENABLE_VIBRATION, ENABLE_VIBRATION_DEFAULT_VALUE);
+        ControllerUtils.setVibrationEnabled(vibrationEnabled);
 
         lorieView.triggerCallback();
 

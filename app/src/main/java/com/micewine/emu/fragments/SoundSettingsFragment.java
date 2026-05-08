@@ -2,7 +2,10 @@ package com.micewine.emu.fragments;
 
 import static com.micewine.emu.activities.GeneralSettingsActivity.PA_SINK;
 import static com.micewine.emu.activities.GeneralSettingsActivity.PA_SINK_DEFAULT_VALUE;
+import static com.micewine.emu.activities.GeneralSettingsActivity.ENABLE_VIBRATION;
+import static com.micewine.emu.activities.GeneralSettingsActivity.ENABLE_VIBRATION_DEFAULT_VALUE;
 import static com.micewine.emu.activities.GeneralSettingsActivity.SPINNER;
+import static com.micewine.emu.activities.GeneralSettingsActivity.SWITCH;
 import static com.micewine.emu.activities.MainActivity.paSink;
 import static com.micewine.emu.activities.MainActivity.usrDir;
 
@@ -52,6 +55,7 @@ public class SoundSettingsFragment extends Fragment {
         settingsList.clear();
 
         addToAdapter(R.string.select_audio_sink, R.string.null_desc, new String[] { "SLES", "AAudio" }, SPINNER, PA_SINK_DEFAULT_VALUE, PA_SINK);
+        addToAdapter(R.string.enable_vibration, R.string.enable_vibration_desc, null, SWITCH, ENABLE_VIBRATION_DEFAULT_VALUE ? "true" : "false", ENABLE_VIBRATION);
     }
 
     private void addToAdapter(int titleId, int descriptionId, String[] values, int type, String defaultValue, String keyId) {

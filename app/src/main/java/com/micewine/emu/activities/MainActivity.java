@@ -215,6 +215,12 @@ import java.util.Objects;
 import mslinks.ShellLink;
 
 public class MainActivity extends AppCompatActivity {
+    private static MainActivity instance;
+
+    public static Context getAppContext() {
+        return instance != null ? instance.getApplicationContext() : null;
+    }
+
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -570,6 +576,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        instance = this;
 
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
 

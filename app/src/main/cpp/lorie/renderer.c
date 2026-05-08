@@ -227,10 +227,28 @@ static struct {
   GLuint id;
   LorieBuffer_Desc desc;
 } display;
+
+// Double buffering para cursor - evita re-upload da mesma textura
 static struct {
-  GLuint id;
-  bool cursorChanged;
-} cursor;
+  GLuint ids[2];           // Duas texturas para alternância
+  int currentIndex;        // Índice atual sendo usado para render
+  int pendingIndex;        // Índice pendente de upload
+  uint32_t lastWidth;
+  uint32_t lastHeight;
+  uint32_t lastHash;       // Hash do conteúdo para detectar mudanças reais
+  bool needsUpload;        // Flag se precisa upload
+} cursor = {{0, 0}, 0, 1, 0, 0, 0, false};
+
+// Performance counters
+static struct {
+  uint64_t framesRendered;
+  uint64_t framesSkipped;
+  uint64_t cursorUploads;
+  uint64_t bufferSwaps;
+  double avgFrameTimeMs;
+  double lastFrameTimeMs;
+  struct timespec lastFrameTime;
+} perf = {0, 0, 0, 0, 0.0, 0.0, {0, 0}};
 static int gles_version = 0;
 static GLuint pbo = 0;
 
@@ -281,6 +299,32 @@ static struct {
   GLuint id;
   uint32_t width, height;
 } last_frame = {0, 0, 0};
+
+// Hash simples para detectar mudanças no cursor
+static uint32_t hashCursorBits(const uint32_t *data, int width, int height) {
+  uint32_t hash = 0;
+  int stride = width * height / 4; // Amostragem a cada 4 pixels
+  if (stride < 1) stride = 1;
+  for (int i = 0; i < width * height; i += stride) {
+    hash = hash * 31 + data[i];
+  }
+  return hash;
+}
+
+static void updatePerfCounters(void) {
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  
+  if (perf.lastFrameTime.tv_sec != 0 || perf.lastFrameTime.tv_nsec != 0) {
+    double frameTimeMs = (now.tv_sec - perf.lastFrameTime.tv_sec) * 1000.0 +
+                         (now.tv_nsec - perf.lastFrameTime.tv_nsec) / 1000000.0;
+    perf.lastFrameTimeMs = frameTimeMs;
+    // Média móvel exponencial
+    perf.avgFrameTimeMs = perf.avgFrameTimeMs * 0.9 + frameTimeMs * 0.1;
+  }
+  perf.lastFrameTime = now;
+  perf.framesRendered++;
+}
 
 static void *renderer_thread(void *closure);
 
@@ -797,13 +841,23 @@ void renderer_refresh_context(JNIEnv *env) {
 
     glActiveTexture(GL_TEXTURE0);
     glGenTextures(1, &display.id);
-    glGenTextures(1, &cursor.id);
+    // Double buffering: criar duas texturas para cursor
+    glGenTextures(2, cursor.ids);
+    cursor.currentIndex = 0;
+    cursor.pendingIndex = 1;
+    cursor.needsUpload = false;
   }
 
   glViewport(0, 0, ANativeWindow_getWidth(win), ANativeWindow_getHeight(win));
   log("Xlorie: new surface applied: %p\n", sfc);
 
   bindLinearTexture(display.id);
+  // Inicializar ambas as texturas do cursor
+  for (int i = 0; i < 2; i++) {
+    bindLinearTexture(cursor.ids[i]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, &emptyData);
+  }
+  
   if (image)
     glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, image);
   else {
@@ -963,13 +1017,43 @@ void renderer_redraw_locked(JNIEnv *env) {
   fence = eglCreateSyncKHR(egl_display, EGL_SYNC_FENCE_KHR, NULL);
 
 
+  // Double buffering otimizado para cursor - só faz upload se realmente mudou
   if (state->cursor.updated) {
     lorie_mutex_lock(&state->cursor.lock, &state->cursor.lockingPid);
+    
+    uint32_t newHash = 0;
+    int cursorW = state->cursor.width;
+    int cursorH = state->cursor.height;
+    
+    // Calcular hash do conteúdo do cursor
+    if (cursorW > 0 && cursorH > 0 && cursorW <= 512 && cursorH <= 512) {
+      newHash = hashCursorBits(state->cursor.bits, cursorW, cursorH);
+    }
+    
+    // Só faz upload se o conteúdo realmente mudou ou se dimensões diferentes
+    bool contentChanged = (newHash != cursor.lastHash) || 
+                          (cursorW != cursor.lastWidth) || 
+                          (cursorH != cursor.lastHeight);
+    
+    if (contentChanged) {
+      // Alternar entre as duas texturas (double buffering)
+      int uploadIndex = cursor.pendingIndex;
+      cursor.pendingIndex = cursor.currentIndex;
+      cursor.currentIndex = uploadIndex;
+      
+      bindLinearTexture(cursor.ids[uploadIndex]);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)cursorW,
+                   (GLsizei)cursorH, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                   state->cursor.bits);
+      
+      cursor.lastHash = newHash;
+      cursor.lastWidth = cursorW;
+      cursor.lastHeight = cursorH;
+      cursor.needsUpload = false;
+      perf.cursorUploads++;
+    }
+    
     state->cursor.updated = false;
-    bindLinearTexture(cursor.id);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)state->cursor.width,
-                 (GLsizei)state->cursor.height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                 state->cursor.bits);
     lorie_mutex_unlock(&state->cursor.lock, &state->cursor.lockingPid);
   }
 
@@ -1025,6 +1109,15 @@ void renderer_redraw_locked(JNIEnv *env) {
   }
 
   state->renderedFrames++;
+  
+  // Atualizar performance counters
+  updatePerfCounters();
+  
+  // Log de performance a cada 60 frames (~1 segundo a 60fps)
+  if ((perf.framesRendered % 60) == 0) {
+    log("Perf: avgFrameTime=%.2fms, cursorUploads=%lu, framesRendered=%lu",
+        perf.avgFrameTimeMs, (unsigned long)perf.cursorUploads, (unsigned long)perf.framesRendered);
+  }
 }
 
 static inline __always_inline bool renderer_should_wait(void) {
@@ -1261,7 +1354,8 @@ __unused static void draw_cursor(void) {
   h = 2.f * (float)state->cursor.height / (float)display.desc.height;
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  draw(cursor.id, x, y, x + w, y + h, false, 1.0f);
+  // Usar textura atual do double buffering
+  draw(cursor.ids[cursor.currentIndex], x, y, x + w, y + h, false, 1.0f);
   glDisable(GL_BLEND);
 }
 

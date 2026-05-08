@@ -43,6 +43,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 
 import com.micewine.emu.LorieView;
+import com.micewine.emu.activities.MainActivity;
 import com.micewine.emu.input.InputStub;
 
 import java.util.ArrayList;
@@ -77,6 +78,7 @@ public class ControllerUtils {
     public static void initialize(Context context) {
         lorieView = new LorieView(context);
         handler.postDelayed(virtualMouseControllerRunnable, 16L);
+        VibratorHelper.initialize(context);
     }
 
     private static final Runnable virtualMouseControllerRunnable = new Runnable() {
@@ -648,4 +650,24 @@ public class ControllerUtils {
 
     @FastNative
     public static native void setEnableDInputNative(boolean enabled);
+
+    @FastNative
+    public static native void nativeInitVibration();
+
+    @FastNative
+    public static native void setVibrationEnabled(boolean enabled);
+
+    // Called from native code when vibration intensity changes (0-255)
+    public static void updateVibration(int intensity) {
+        Context context = MainActivity.getAppContext();
+        if (context == null) {
+            return;
+        }
+
+        if (intensity > 0) {
+            VibratorHelper.startVibration(context, intensity);
+        } else {
+            VibratorHelper.stopVibration();
+        }
+    }
 }

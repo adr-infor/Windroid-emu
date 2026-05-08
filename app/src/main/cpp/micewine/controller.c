@@ -46,6 +46,13 @@ static bool enableDInput = true;
 static pthread_t controller_thread_id;
 static int sockfd;
 
+// Vibration state
+static JavaVM *jvm = NULL;
+static jclass controllerUtilsClass = NULL;
+static jmethodID updateVibrationMethod = NULL;
+static bool vibrationEnabled = true;
+static int currentVibrationIntensity = 0;
+
 static void thread_signal_handler(__unused int signum) {
   pthread_exit(NULL);
   if (sockfd >= 0) {
@@ -104,6 +111,41 @@ void *controller_update_thread(__unused void *param) {
       sendto(sockfd, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&clientAddr,
              addrLen);
     } else if (buffer[0] == REQUEST_GET_CONTROLLER_STATE) {
+      // Extract vibration data from Wine (buffer[1-8] contains vibration for 4 controllers)
+      // buffer[1]=C0 left, [2]=C0 right, [3]=C1 left, [4]=C1 right, etc.
+      // Values are 0-255 (already scaled from 0-65535 by Wine)
+      if (vibrationEnabled && jvm != NULL && controllerUtilsClass != NULL && updateVibrationMethod != NULL) {
+        int maxVibration = 0;
+        for (int i = 0; i < 4; i++) {
+          if (connectedVirtualControllers[i].isConnected) {
+            int leftVibration = buffer[1 + (i * 2)];
+            int rightVibration = buffer[2 + (i * 2)];
+            int controllerMax = (leftVibration > rightVibration) ? leftVibration : rightVibration;
+            if (controllerMax > maxVibration) {
+              maxVibration = controllerMax;
+            }
+          }
+        }
+
+        // Only update if intensity changed
+        if (maxVibration != currentVibrationIntensity) {
+          currentVibrationIntensity = maxVibration;
+          JNIEnv *jniEnv;
+          int getEnvStat = (*jvm)->GetEnv(jvm, (void **)&jniEnv, JNI_VERSION_1_6);
+          int attached = 0;
+          if (getEnvStat == JNI_EDETACHED) {
+            (*jvm)->AttachCurrentThread(jvm, &jniEnv, NULL);
+            attached = 1;
+          }
+          if (jniEnv != NULL) {
+            (*jniEnv)->CallStaticVoidMethod(jniEnv, controllerUtilsClass, updateVibrationMethod, (jint)maxVibration);
+            if (attached) {
+              (*jvm)->DetachCurrentThread(jvm);
+            }
+          }
+        }
+      }
+
       for (int i = 0; i < 4; i++) {
         buffer[0 + (i * 11)] = REQUEST_GET_CONTROLLER_STATE;
         buffer[1 + (i * 11)] =
@@ -248,4 +290,35 @@ Java_com_micewine_emu_controller_ControllerUtils_updateAxisStateNative(
   connectedVirtualControllers[index].axisLT = float_to_u8_255(lt * 2.F - 1.F);
   connectedVirtualControllers[index].axisRT = float_to_u8_255(rt * 2.F - 1.F);
   connectedVirtualControllers[index].dpadStatus = dpadStatus;
+}
+
+JNIEXPORT void JNICALL
+Java_com_micewine_emu_controller_ControllerUtils_setVibrationEnabled(
+    __unused JNIEnv *env, __unused jobject cls, jboolean enabled) {
+  vibrationEnabled = enabled;
+  if (!enabled) {
+    // Stop current vibration when disabled
+    if (jvm != NULL && controllerUtilsClass != NULL && updateVibrationMethod != NULL) {
+      JNIEnv *jniEnv;
+      int getEnvStat = (*jvm)->GetEnv(jvm, (void **)&jniEnv, JNI_VERSION_1_6);
+      if (getEnvStat == JNI_EDETACHED) {
+        (*jvm)->AttachCurrentThread(jvm, &jniEnv, NULL);
+      }
+      if (jniEnv != NULL) {
+        (*jniEnv)->CallStaticVoidMethod(jniEnv, controllerUtilsClass, updateVibrationMethod, (jint)0);
+        if (getEnvStat == JNI_EDETACHED) {
+          (*jvm)->DetachCurrentThread(jvm);
+        }
+      }
+    }
+    currentVibrationIntensity = 0;
+  }
+}
+
+JNIEXPORT void JNICALL
+Java_com_micewine_emu_controller_ControllerUtils_nativeInitVibration(
+    JNIEnv *env, jobject cls) {
+  (*env)->GetJavaVM(env, &jvm);
+  controllerUtilsClass = (*env)->NewGlobalRef(env, cls);
+  updateVibrationMethod = (*env)->GetStaticMethodID(env, controllerUtilsClass, "updateVibration", "(I)V");
 }
