@@ -507,21 +507,26 @@ static Bool lorieRedraw(__unused ClientPtr pClient, __unused void *closure) {
   priv = lorieRootWindowPixmapPriv();
 
   if (nonEmpty && priv && priv->buffer) {
-    // Desbloquear buffer atual (zero-copy: não precisa copiar)
+    LorieBuffer *middleBuffer = pvfb->root.buffers[pvfb->root.middleIndex];
+    
+    // Desbloquear buffer atual antes de copiar (necessário para sincronização/DMA)
     LorieBuffer_unlock(priv->buffer);
     
-    // Zero-copy: em vez de copiar, apenas swap os ponteiros dos buffers
-    // O X server escreve no buffer back, renderer lê do mesmo buffer
-    DamageEmpty(pvfb->damage);
-    pvfb->state->drawRequested = TRUE;
-    
-    // Swap triple buffers: back -> middle (agora contém último frame)
-    lorieSwapTripleBuffers();
+    // Copiar conteúdo atualizado do buffer do X para o buffer middle (pronto para render)
+    if (priv->buffer && middleBuffer) {
+      LorieBuffer_copy(priv->buffer, middleBuffer);
+    }
     
     // Re-lock do buffer para continuar recebendo updates do X
     status = LorieBuffer_lock(priv->buffer, NULL, &priv->locked);
     if (status)
       FatalError("Failed to lock the surface: %d\n", status);
+
+    DamageEmpty(pvfb->damage);
+    pvfb->state->drawRequested = TRUE;
+    
+    // Swap triple buffers: back -> middle (agora contém último frame)
+    lorieSwapTripleBuffers();
   }
 
   if (pvfb->state->drawRequested || pvfb->state->cursor.moved ||

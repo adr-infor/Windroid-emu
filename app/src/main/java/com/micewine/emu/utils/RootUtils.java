@@ -97,10 +97,18 @@ public class RootUtils {
     }
 
     /**
+     * Verifica se o tmpfs já está montado.
+     */
+    public static boolean isTmpfsMounted() {
+        String mounts = runCommandWithOutput("su -c 'cat /proc/mounts'", false);
+        return mounts != null && mounts.contains("/data/data/com.micewine.emu/files/usr/tmp");
+    }
+
+    /**
      * Monta um tmpfs na pasta temporária da esync para evitar I/O na memória Flash.
      */
     public static void mountTmpfs() {
-        if (!isRootAvailable()) return;
+        if (!isRootAvailable() || isTmpfsMounted()) return;
         
         Log.i(TAG, "Mounting tmpfs for esync...");
         runCommand("su -c 'mkdir -p /data/data/com.micewine.emu/files/usr/tmp'", false);

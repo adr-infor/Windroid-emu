@@ -808,8 +808,6 @@ public class MainActivity extends AppCompatActivity {
             RootUtils.applyPerformanceMode();
         }
 
-        RootUtils.mountTmpfs();
-
         installDXWrapper(winePrefix);
         setupUserLinks(winePrefix);
 
@@ -859,8 +857,6 @@ public class MainActivity extends AppCompatActivity {
 
         WineWrapper.killAll();
 
-        RootUtils.umountTmpfs();
-
         if (preferences.getBoolean(PERF_MODE_ROOT, false)) {
             RootUtils.restoreDefaultMode();
         }
@@ -875,6 +871,8 @@ public class MainActivity extends AppCompatActivity {
             return;
 
         runningXServer = true;
+
+        RootUtils.mountTmpfs();
 
         new Thread(() -> runCommand(
                 "env CLASSPATH=" + getClassPath()
