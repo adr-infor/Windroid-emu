@@ -97,6 +97,7 @@ import static com.micewine.emu.fragments.Box64PresetManagerFragment.getBox64MMap
 import static com.micewine.emu.fragments.Box64PresetManagerFragment.getBox64NativeFlags;
 import static com.micewine.emu.fragments.Box64PresetManagerFragment.getBox64Pause;
 import static com.micewine.emu.fragments.Box64PresetManagerFragment.getBox64SafeFlags;
+import com.micewine.emu.utils.RootUtils;
 import static com.micewine.emu.fragments.Box64PresetManagerFragment.getBox64Sse42;
 import static com.micewine.emu.fragments.Box64PresetManagerFragment.getBox64StrongMem;
 import static com.micewine.emu.fragments.Box64PresetManagerFragment.getBox64Wait;
@@ -807,6 +808,8 @@ public class MainActivity extends AppCompatActivity {
             RootUtils.applyPerformanceMode();
         }
 
+        RootUtils.mountTmpfs();
+
         installDXWrapper(winePrefix);
         setupUserLinks(winePrefix);
 
@@ -855,6 +858,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         WineWrapper.killAll();
+
+        RootUtils.umountTmpfs();
 
         if (preferences.getBoolean(PERF_MODE_ROOT, false)) {
             RootUtils.restoreDefaultMode();

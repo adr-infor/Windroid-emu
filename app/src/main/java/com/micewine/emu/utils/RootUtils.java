@@ -95,4 +95,25 @@ public class RootUtils {
             runCommand("su -c 'echo msm-adreno-tz > /sys/class/kgsl/kgsl-3d0/governor' 2>/dev/null", false);
         }
     }
+
+    /**
+     * Monta um tmpfs na pasta temporária da esync para evitar I/O na memória Flash.
+     */
+    public static void mountTmpfs() {
+        if (!isRootAvailable()) return;
+        
+        Log.i(TAG, "Mounting tmpfs for esync...");
+        runCommand("su -c 'mkdir -p /data/data/com.micewine.emu/files/usr/tmp'", false);
+        runCommand("su -c 'mount -t tmpfs -o size=256M,mode=1777 tmpfs /data/data/com.micewine.emu/files/usr/tmp'", false);
+    }
+
+    /**
+     * Desmonta o tmpfs quando o Wine finaliza.
+     */
+    public static void umountTmpfs() {
+        if (!isRootAvailable()) return;
+        
+        Log.i(TAG, "Unmounting tmpfs...");
+        runCommand("su -c 'umount /data/data/com.micewine.emu/files/usr/tmp'", false);
+    }
 }
