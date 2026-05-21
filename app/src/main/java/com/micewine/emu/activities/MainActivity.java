@@ -817,6 +817,9 @@ public class MainActivity extends AppCompatActivity {
             WineWrapper.wine(
                     "reg add HKCU\\\\Control\\\\ Panel\\\\Desktop /t REG_DWORD /v LogPixels /d " + newDpi + " /f");
 
+            WineWrapper.wine(
+                    "reg add HKCU\\\\Software\\\\Wine\\\\DllOverrides /v dcomp /d \"\" /f");
+
             SharedPreferences.Editor editor = preferences.edit();
 
             editor.putBoolean(WINE_DPI_APPLIED, true);
