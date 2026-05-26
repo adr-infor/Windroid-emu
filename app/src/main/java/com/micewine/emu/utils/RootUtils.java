@@ -58,6 +58,8 @@ public class RootUtils {
                 runCommand("su -c 'echo performance > " + adrenoPath + "'", false);
             }
         }
+
+        optimizeIOScheduler();
     }
 
     /**
@@ -94,6 +96,49 @@ public class RootUtils {
             runCommand("su -c 'echo msm-adreno-tz > /sys/class/kgsl/kgsl-3d0/devfreq/governor' 2>/dev/null", false);
             runCommand("su -c 'echo msm-adreno-tz > /sys/class/kgsl/kgsl-3d0/governor' 2>/dev/null", false);
         }
+
+        // Reset I/O Scheduler
+        runCommand("su -c 'echo cfq > /sys/block/mmcblk0/queue/scheduler' 2>/dev/null", false);
+        runCommand("su -c 'echo mq-deadline > /sys/block/mmcblk0/queue/scheduler' 2>/dev/null", false);
+    }
+
+    /**
+     * Otimiza processos do Wine/Box64 para máxima prioridade.
+     */
+    public static void optimizeWineProcesses() {
+        if (!isRootAvailable()) return;
+
+        Log.i(TAG, "Optimizing process priorities...");
+
+        // Aumenta a prioridade do wineserver e processos box64
+        String pids = runCommandWithOutput("su -c 'pgrep -f \"wineserver|box64\"'", false);
+        if (pids != null && !pids.isEmpty()) {
+            for (String pid : pids.split("\n")) {
+                pid = pid.trim();
+                if (!pid.isEmpty()) {
+                    // CPU Priority (Niceness)
+                    runCommand("su -c 'renice -n -20 -p " + pid + "'", false);
+                    // I/O Priority
+                    runCommand("su -c 'ionice -c 1 -n 0 -p " + pid + "'", false);
+                    // OOM Protection
+                    runCommand("su -c 'echo -1000 > /proc/" + pid + "/oom_score_adj'", false);
+                }
+            }
+        }
+    }
+
+    /**
+     * Melhora o scheduler de I/O para reduzir latência.
+     */
+    public static void optimizeIOScheduler() {
+        if (!isRootAvailable()) return;
+
+        Log.i(TAG, "Optimizing I/O scheduler...");
+        // Tenta definir para deadline ou noop que costumam ser melhores para emulação
+        runCommand("su -c 'echo deadline > /sys/block/mmcblk0/queue/scheduler' 2>/dev/null", false);
+        runCommand("su -c 'echo noop > /sys/block/mmcblk0/queue/scheduler' 2>/dev/null", false);
+        runCommand("su -c 'echo 0 > /sys/block/mmcblk0/queue/add_random' 2>/dev/null", false);
+        runCommand("su -c 'echo 1024 > /sys/block/mmcblk0/queue/read_ahead_kb' 2>/dev/null", false);
     }
 
     /**
@@ -113,6 +158,12 @@ public class RootUtils {
         Log.i(TAG, "Mounting tmpfs for esync...");
         runCommand("su -c 'mkdir -p /data/data/com.micewine.emu/files/usr/tmp'", false);
         runCommand("su -c 'mount -t tmpfs -o size=256M,mode=1777 tmpfs /data/data/com.micewine.emu/files/usr/tmp'", false);
+
+        if (isTmpfsMounted()) {
+            Log.i(TAG, "tmpfs successfully mounted in RAM.");
+        } else {
+            Log.e(TAG, "Failed to mount tmpfs. Esync will use physical storage.");
+        }
     }
 
     /**

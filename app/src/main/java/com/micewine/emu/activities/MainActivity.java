@@ -806,6 +806,14 @@ public class MainActivity extends AppCompatActivity {
 
         if (preferences.getBoolean(PERF_MODE_ROOT, false)) {
             RootUtils.applyPerformanceMode();
+
+            new Thread(() -> {
+                try {
+                    Thread.sleep(5000); // Espera o Wine iniciar
+                    RootUtils.optimizeWineProcesses();
+                } catch (InterruptedException ignored) {
+                }
+            }).start();
         }
 
         installDXWrapper(winePrefix);
@@ -863,6 +871,8 @@ public class MainActivity extends AppCompatActivity {
         if (preferences.getBoolean(PERF_MODE_ROOT, false)) {
             RootUtils.restoreDefaultMode();
         }
+
+        RootUtils.umountTmpfs();
 
         runOnUiThread(() -> Toast.makeText(this, getString(R.string.wine_is_closed), Toast.LENGTH_SHORT).show());
     }
