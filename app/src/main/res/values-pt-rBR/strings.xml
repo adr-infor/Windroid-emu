@@ -263,8 +263,6 @@
         <item quantity="one">há %d ano</item>
         <item quantity="other">há %d anos</item>
     </plurals>
-    <string name="vulkan_bypass_title">Bypass Gráfico Híbrido</string>
-    <string name="vulkan_bypass_desc">Pula a camada X11 para renderização Vulkan direta na superfície Android (reduz latência)</string>
     <string name="enable_vibration">Ativar Vibração do Jogo</string>
     <string name="enable_vibration_desc">Permite o celular vibrar de acordo com ações no jogo</string>
 </resources>

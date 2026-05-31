@@ -56,8 +56,6 @@ import static com.micewine.emu.activities.GeneralSettingsActivity.WINE_HIDE;
 import static com.micewine.emu.activities.GeneralSettingsActivity.WINE_HIDE_DEFAULT_VALUE;
 import static com.micewine.emu.activities.GeneralSettingsActivity.SELECTED_WINE_FRAMESKIP;
 import static com.micewine.emu.activities.GeneralSettingsActivity.WINE_FRAMESKIP_0;
-import static com.micewine.emu.activities.GeneralSettingsActivity.WINDROID_USE_ANDROID_SURFACE;
-import static com.micewine.emu.activities.GeneralSettingsActivity.WINDROID_USE_ANDROID_SURFACE_DEFAULT_VALUE;
 
 import static com.micewine.emu.activities.PresetManagerActivity.SELECTED_BOX64_PRESET;
 import static com.micewine.emu.activities.RatManagerActivity.generateICDFile;
@@ -1116,7 +1114,6 @@ public class MainActivity extends AppCompatActivity {
     public static String vulkanDriverDriverVersion = null;
     public static int screenFpsLimit = 60;
     public static int fpsLimit = 0;
-    public static boolean useAndroidSurface = false;
     public static String paSink = null;
     public static String selectedResolution = null;
     public static boolean useAdrenoTools = false;
@@ -1240,7 +1237,6 @@ public class MainActivity extends AppCompatActivity {
         wineFsrSharpness = preferences.getInt(WINE_FSR_SHARPNESS, WINE_FSR_SHARPNESS_DEFAULT_VALUE);
         selectedWineFrameSkip = preferences.getString(SELECTED_WINE_FRAMESKIP, WINE_FRAMESKIP_0);
         wineHide = preferences.getBoolean(WINE_HIDE, WINE_HIDE_DEFAULT_VALUE);
-        useAndroidSurface = preferences.getBoolean(WINDROID_USE_ANDROID_SURFACE, WINDROID_USE_ANDROID_SURFACE_DEFAULT_VALUE);
         selectedColorProfile = preferences.getString(COLOR_PROFILE, COLOR_PROFILE_DEFAULT_VALUE);
 
         enableRamCounter = preferences.getBoolean(RAM_COUNTER, RAM_COUNTER_DEFAULT_VALUE);

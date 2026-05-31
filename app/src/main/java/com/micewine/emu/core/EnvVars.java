@@ -43,7 +43,6 @@ import static com.micewine.emu.activities.MainActivity.selectedVramLimit;
 import static com.micewine.emu.activities.MainActivity.selectedWine;
 import static com.micewine.emu.activities.MainActivity.strBoolToNum;
 import static com.micewine.emu.activities.MainActivity.tmpDir;
-import static com.micewine.emu.activities.MainActivity.useAndroidSurface;
 import static com.micewine.emu.activities.MainActivity.useAdrenoTools;
 import static com.micewine.emu.activities.MainActivity.usrDir;
 import static com.micewine.emu.activities.MainActivity.wineESync;
@@ -216,10 +215,6 @@ public class EnvVars {
 
         vars.add("WINE_Z_DISK=" + appRootDir);
         vars.add("WINEESYNC=" + strBoolToNum(wineESync));
-
-        if (useAndroidSurface) {
-            vars.add("WINDROID_USE_ANDROID_SURFACE=1");
-        }
 
         vars.add("WINE_NO_WINEMENUBUILDER=1");
 

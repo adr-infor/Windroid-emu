@@ -313,8 +313,6 @@
     <string name="wine_hide_desc">Hides Wine-specific files and exports to help avoid anti-cheat detection</string>
     <string name="wine_frameskip_title">Pulo de quadros nativo (Wine)</string>
     <string name="wine_frameskip_desc">Pula quadros no driver de vídeo para máxima economia de CPU/GPU (recomendado)</string>
-    <string name="vulkan_bypass_title">Vulkan Hybrid Bypass</string>
-    <string name="vulkan_bypass_desc">Bypass X11 for direct Vulkan rendering on Android Surface (reduces latency)</string>
     <string name="enable_vibration">Enable Game Vibration</string>
     <string name="enable_vibration_desc">Allow phone to vibrate based on in-game actions</string>
 </resources>
