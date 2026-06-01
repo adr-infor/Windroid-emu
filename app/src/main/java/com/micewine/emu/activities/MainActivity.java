@@ -20,6 +20,7 @@ import static com.micewine.emu.activities.GeneralSettingsActivity.FPS_LIMIT;
 import static com.micewine.emu.activities.GeneralSettingsActivity.PA_SINK;
 import static com.micewine.emu.activities.GeneralSettingsActivity.PA_SINK_DEFAULT_VALUE;
 import static com.micewine.emu.activities.GeneralSettingsActivity.PERF_MODE_ROOT;
+import static com.micewine.emu.activities.GeneralSettingsActivity.SELINUX_PERMISSIVE_ROOT;
 import static com.micewine.emu.activities.GeneralSettingsActivity.SELECTED_BOX64;
 import static com.micewine.emu.activities.GeneralSettingsActivity.SELECTED_DXVK_HUD_PRESET;
 import static com.micewine.emu.activities.GeneralSettingsActivity.SELECTED_DXVK_HUD_PRESET_DEFAULT_VALUE;
@@ -814,6 +815,10 @@ public class MainActivity extends AppCompatActivity {
             }).start();
         }
 
+        if (preferences.getBoolean(SELINUX_PERMISSIVE_ROOT, false)) {
+            RootUtils.applySelinuxPermissive();
+        }
+
         installDXWrapper(winePrefix);
         setupUserLinks(winePrefix);
 
@@ -868,6 +873,10 @@ public class MainActivity extends AppCompatActivity {
 
         if (preferences.getBoolean(PERF_MODE_ROOT, false)) {
             RootUtils.restoreDefaultMode();
+        }
+
+        if (preferences.getBoolean(SELINUX_PERMISSIVE_ROOT, false)) {
+            RootUtils.restoreSelinuxMode();
         }
 
         RootUtils.umountTmpfs();

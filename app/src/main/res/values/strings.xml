@@ -276,6 +276,9 @@
     <string name="perf_mode_root_title">Performance Mode (Root)</string>
     <string name="perf_mode_root_desc">Use root access to maximize CPU and GPU clocks for better performance</string>
 
+    <string name="selinux_permissive_root_title">SELinux Permissive (Root)</string>
+    <string name="selinux_permissive_root_desc">Set SELinux to permissive mode using root access (required for some games/drivers)</string>
+
     <plurals name="seconds_ago">
         <item quantity="one">%d second ago</item>
         <item quantity="other">%d seconds ago</item>

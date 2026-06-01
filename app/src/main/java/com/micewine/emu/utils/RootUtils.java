@@ -9,6 +9,7 @@ public class RootUtils {
     private static final String TAG = "RootUtils";
     private static String[] originalCpuGovernors;
     private static String originalGpuGovernor;
+    private static boolean originalSelinuxPermissive;
 
     /**
      * Checks if root access is available.
@@ -174,5 +175,48 @@ public class RootUtils {
         
         Log.i(TAG, "Unmounting tmpfs...");
         runCommand("su -c 'umount /data/data/com.micewine.emu/files/usr/tmp'", false);
+    }
+
+    /**
+     * Sets SELinux to permissive mode or enforcing mode.
+     * @param permissive true to set to permissive (0), false to set to enforcing (1).
+     */
+    public static void setSelinuxPermissive(boolean permissive) {
+        if (!isRootAvailable()) return;
+
+        Log.i(TAG, "Setting SELinux to " + (permissive ? "permissive" : "enforcing") + "...");
+        runCommand("su -c 'setenforce " + (permissive ? "0" : "1") + "'", false);
+    }
+
+    /**
+     * Applies SELinux permissive mode and saves the original state.
+     */
+    public static void applySelinuxPermissive() {
+        if (!isRootAvailable()) return;
+        originalSelinuxPermissive = isSelinuxPermissive();
+        if (!originalSelinuxPermissive) {
+            setSelinuxPermissive(true);
+        }
+    }
+
+    /**
+     * Restores the original SELinux state.
+     */
+    public static void restoreSelinuxMode() {
+        if (!isRootAvailable()) return;
+        if (!originalSelinuxPermissive) {
+            setSelinuxPermissive(false);
+        }
+    }
+
+    /**
+     * Checks if SELinux is currently permissive.
+     * @return true if permissive, false if enforcing or unknown.
+     */
+    public static boolean isSelinuxPermissive() {
+        if (!isRootAvailable()) return false;
+
+        String output = runCommandWithOutput("su -c 'getenforce'", false);
+        return output != null && output.trim().equalsIgnoreCase("Permissive");
     }
 }
