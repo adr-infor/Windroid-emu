@@ -99,7 +99,13 @@ static void checkGlError(int line) {
   }
 }
 
-#define checkGlError() checkGlError(__LINE__)
+/* In release builds, glGetError() is a full GPU pipeline sync barrier.
+ * Disable it completely to avoid adding latency on every draw call. */
+#ifdef NDEBUG
+  #define checkGlError() ((void)0)
+#else
+  #define checkGlError() checkGlError(__LINE__)
+#endif
 
 static const char vertex_shader[] = "attribute vec4 position;\n"
                                     "attribute vec2 texCoords;"
@@ -228,6 +234,12 @@ static struct {
   LorieBuffer_Desc desc;
 } display;
 
+static GLuint local_display_id = 0;
+static GLuint quad_vbo = 0;  // Static VBO for the full-screen quad (never changes)
+static GLuint copy_fbo = 0;
+static uint32_t local_display_width = 0;
+static uint32_t local_display_height = 0;
+
 // Double buffering para cursor - evita re-upload da mesma textura
 static struct {
   GLuint ids[2];           // Duas texturas para alternância
@@ -328,12 +340,25 @@ static void updatePerfCounters(void) {
 
 static void *renderer_thread(void *closure);
 
-static inline __always_inline void bindLinearTexture(GLuint id) {
+/* Only bind — texture parameters are persistent state on the texture object.
+ * Call initLinearTexture() once at creation time, then just bindTexture(). */
+static inline __always_inline void bindTexture(GLuint id) {
   glBindTexture(GL_TEXTURE_2D, id);
+}
+
+/* Sets LINEAR filter + CLAMP params on the currently bound texture.
+ * Must be called once after glGenTextures, before any use. */
+static inline __always_inline void initTextureParams(void) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+}
+
+/* Legacy helper used at texture creation sites — bind + set params. */
+static inline __always_inline void bindLinearTexture(GLuint id) {
+  glBindTexture(GL_TEXTURE_2D, id);
+  initTextureParams();
 }
 
 static EGLint configAttribs[] = {EGL_SURFACE_TYPE,
@@ -841,22 +866,38 @@ void renderer_refresh_context(JNIEnv *env) {
 
     glActiveTexture(GL_TEXTURE0);
     glGenTextures(1, &display.id);
-    // Double buffering: criar duas texturas para cursor
+    bindLinearTexture(display.id);  // Set params once at creation
+
+    // Double buffering: criar duas texturas para cursor (params setados uma vez)
     glGenTextures(2, cursor.ids);
+    for (int i = 0; i < 2; i++) {
+      bindLinearTexture(cursor.ids[i]);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, &emptyData);
+    }
     cursor.currentIndex = 0;
     cursor.pendingIndex = 1;
     cursor.needsUpload = false;
+
+    // Create static VBO for the full-screen quad — uploaded once, reused every frame.
+    // Coords: {posX, posY, texU, texV} * 4 vertices (TRIANGLE_STRIP)
+    if (!quad_vbo) {
+      static const float quad_data[16] = {
+        -1.f,  1.f,  0.f, 0.f,   // top-left
+         1.f,  1.f,  1.f, 0.f,   // top-right
+        -1.f, -1.f,  0.f, 1.f,   // bottom-left
+         1.f, -1.f,  1.f, 1.f,   // bottom-right
+      };
+      glGenBuffers(1, &quad_vbo);
+      glBindBuffer(GL_ARRAY_BUFFER, quad_vbo);
+      glBufferData(GL_ARRAY_BUFFER, sizeof(quad_data), quad_data, GL_STATIC_DRAW);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
   }
 
   glViewport(0, 0, ANativeWindow_getWidth(win), ANativeWindow_getHeight(win));
   log("Xlorie: new surface applied: %p\n", sfc);
 
-  bindLinearTexture(display.id);
-  // Inicializar ambas as texturas do cursor
-  for (int i = 0; i < 2; i++) {
-    bindLinearTexture(cursor.ids[i]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, &emptyData);
-  }
+  bindTexture(display.id);  // Params already set at creation
   
   if (image)
     glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, image);
@@ -912,6 +953,13 @@ static void renderer_renew_image(void) {
       // We should redraw image at least once right after buffer change
       state->surfaceAvailable = state->drawRequested = state->cursor.updated =
           true;
+
+    if (local_display_id) {
+      glDeleteTextures(1, &local_display_id);
+      local_display_id = 0;
+      local_display_width = 0;
+      local_display_height = 0;
+    }
 
     bindLinearTexture(display.id);
     if (image)
@@ -991,6 +1039,58 @@ void renderer_redraw_locked(JNIEnv *env) {
                       display.desc.height, format, GL_UNSIGNED_BYTE,
                       display.desc.data);
     }
+  } else if (!display.desc.data && state->drawRequested) {
+    state->drawRequested = FALSE;
+
+    if (!local_display_id || local_display_width != display.desc.width || local_display_height != display.desc.height) {
+      if (local_display_id) glDeleteTextures(1, &local_display_id);
+      glGenTextures(1, &local_display_id);
+      bindLinearTexture(local_display_id);  // bindLinearTexture = bind + set params (creation site)
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, display.desc.width, display.desc.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+      local_display_width = display.desc.width;
+      local_display_height = display.desc.height;
+    }
+
+    if (!copy_fbo) {
+      glGenFramebuffers(1, &copy_fbo);
+    }
+
+#if defined(GL_ES_VERSION_3_0)
+    if (gles_version >= 3) {
+      /* glBlitFramebuffer is a direct GPU-to-GPU blit — much faster than
+       * glCopyTexSubImage2D which reads back through the framebuffer. */
+      GLuint dst_fbo = 0;
+      glGenFramebuffers(1, &dst_fbo);
+
+      // Source: display.id
+      glBindFramebuffer(GL_READ_FRAMEBUFFER, copy_fbo);
+      glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, display.id, 0);
+
+      // Destination: local_display_id
+      glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dst_fbo);
+      glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, local_display_id, 0);
+
+      glBlitFramebuffer(0, 0, (GLint)display.desc.width, (GLint)display.desc.height,
+                        0, 0, (GLint)display.desc.width, (GLint)display.desc.height,
+                        GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      glDeleteFramebuffers(1, &dst_fbo);
+    } else
+#endif
+    {
+      // GLES 2 fallback: glCopyTexSubImage2D via read framebuffer
+      glBindFramebuffer(GL_FRAMEBUFFER, copy_fbo);
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, display.id, 0);
+      bindTexture(local_display_id);
+      glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, display.desc.width, display.desc.height);
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    // Flush and unlock X server early
+    glFlush();
+    lorie_mutex_unlock(&state->lock, &state->lockingPid);
+    unlocked_early = true;
   }
 
   // Not a mistake, we reset drawRequested flag even in the case if there is no
@@ -1001,16 +1101,18 @@ void renderer_redraw_locked(JNIEnv *env) {
   int win_width = ANativeWindow_getWidth(win);
   int win_height = ANativeWindow_getHeight(win);
 
+  GLuint active_tex_id = (display.desc.data || !local_display_id) ? display.id : local_display_id;
+
   if (frame_generation == 1 && last_frame.id && last_frame.width == win_width && last_frame.height == win_height) {
     // Draw interpolated frame (50% previous, 50% current)
-    draw(display.id, -1.f, -1.f, 1.f, 1.f,
+    draw(active_tex_id, -1.f, -1.f, 1.f, 1.f,
          display.desc.format != AHARDWAREBUFFER_FORMAT_B8G8R8A8_UNORM, 0.5f);
     eglSwapBuffers(egl_display, sfc);
     state->renderedFrames++;
   }
 
   // Draw current frame
-  draw(display.id, -1.f, -1.f, 1.f, 1.f,
+  draw(active_tex_id, -1.f, -1.f, 1.f, 1.f,
        display.desc.format != AHARDWAREBUFFER_FORMAT_B8G8R8A8_UNORM, 1.0f);
 
   // Sync fence created, but we will not wait FOREVER to avoid blocking the CPU
@@ -1066,13 +1168,15 @@ void renderer_redraw_locked(JNIEnv *env) {
     if (!last_frame.id || last_frame.width != win_width || last_frame.height != win_height) {
       if (last_frame.id) glDeleteTextures(1, &last_frame.id);
       glGenTextures(1, &last_frame.id);
-      bindLinearTexture(last_frame.id);
+      bindLinearTexture(last_frame.id);  // bindLinearTexture = bind + set params (creation site)
       glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, win_width, win_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
       last_frame.width = win_width;
       last_frame.height = win_height;
     }
-    // We can use glCopyTexSubImage2D to copy from the current framebuffer (which has display.id drawn)
-    bindLinearTexture(last_frame.id);
+    /* Use glCopyTexSubImage2D from the default framebuffer (post-draw).
+     * This is the only valid path here since we read from the window surface,
+     * not from a texture-backed FBO. */
+    bindTexture(last_frame.id);
     glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, win_width, win_height);
   }
 
@@ -1080,7 +1184,10 @@ void renderer_redraw_locked(JNIEnv *env) {
   // server
   // Using a short timeout instead of EGL_FOREVER to prevent CPU stalls
   if (!unlocked_early) {
-    eglClientWaitSyncKHR(egl_display, fence, 0, 0); // Non-blocking wait
+    /* Wait up to 2ms for the GPU to finish before releasing the X server lock.
+     * Timeout 0 returns immediately (no sync), EGL_FOREVER can stall the CPU.
+     * 2ms is enough for a simple blit frame on any mobile GPU. */
+    eglClientWaitSyncKHR(egl_display, fence, EGL_SYNC_FLUSH_COMMANDS_BIT_KHR, 2000000ULL);
     lorie_mutex_unlock(&state->lock, &state->lockingPid);
   }
 
@@ -1239,15 +1346,23 @@ static GLuint create_program(const char *p_vertex_source,
 
 static void draw(GLuint id, float x0, float y0, float x1, float y1,
                  uint8_t flip, float alpha) {
-  float coords[16] = {
-      x0, -y0, 0.f, 0.f, x1, -y0, 1.f, 0.f,
-      x0, -y1, 0.f, 1.f, x1, -y1, 1.f, 1.f,
-  };
+  /* Use the static VBO when rendering the full-screen quad (fixed coords -1,-1,1,1).
+   * For other quads (e.g. cursor), fall back to immediate vertex data. */
+  const bool is_fullscreen_quad = (x0 == -1.f && y0 == -1.f && x1 == 1.f && y1 == 1.f);
+
+  float coords[16];
+  if (!is_fullscreen_quad) {
+    /* Cursor or custom quad — build vertex data on the stack */
+    coords[0]  = x0; coords[1]  = -y0; coords[2]  = 0.f; coords[3]  = 0.f;
+    coords[4]  = x1; coords[5]  = -y0; coords[6]  = 1.f; coords[7]  = 0.f;
+    coords[8]  = x0; coords[9]  = -y1; coords[10] = 0.f; coords[11] = 1.f;
+    coords[12] = x1; coords[13] = -y1; coords[14] = 1.f; coords[15] = 1.f;
+  }
 
   GLuint p = flip ? gv_pos_bgra : gv_pos, c = flip ? gv_coords_bgra : gv_coords;
   GLuint prog = flip ? g_texture_program_bgra : g_texture_program;
 
-  if (id == display.id) {
+  if (id == display.id || (local_display_id && id == local_display_id)) {
     if (frame_generation == 1 && alpha > 0.0f && g_interpolation_program) {
       prog = g_interpolation_program;
       p = gv_pos_interp;
@@ -1292,7 +1407,7 @@ static void draw(GLuint id, float x0, float y0, float x1, float y1,
       glUniform1i(cp, color_profile);
   }
 
-  if (id == display.id) {
+  if (id == display.id || (local_display_id && id == local_display_id)) {
     if (frame_generation == 1 && alpha < 1.0f) {
       if (flip && g_interpolation_program_bgra) {
         glUniform1f(gu_alpha_interp_bgra, alpha);
@@ -1330,11 +1445,23 @@ static void draw(GLuint id, float x0, float y0, float x1, float y1,
     }
   }
 
-  glVertexAttribPointer(p, 2, GL_FLOAT, GL_FALSE, 16, coords);
-  glVertexAttribPointer(c, 2, GL_FLOAT, GL_FALSE, 16, &coords[2]);
-  glEnableVertexAttribArray(p);
-  glEnableVertexAttribArray(c);
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  if (is_fullscreen_quad && quad_vbo) {
+    /* Static VBO path: no per-frame upload, just pointer into the resident buffer */
+    glBindBuffer(GL_ARRAY_BUFFER, quad_vbo);
+    glVertexAttribPointer(p, 2, GL_FLOAT, GL_FALSE, 16, (void *)0);
+    glVertexAttribPointer(c, 2, GL_FLOAT, GL_FALSE, 16, (void *)(2 * sizeof(float)));
+    glEnableVertexAttribArray(p);
+    glEnableVertexAttribArray(c);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+  } else {
+    /* Immediate path for cursor / dynamic quads */
+    glVertexAttribPointer(p, 2, GL_FLOAT, GL_FALSE, 16, coords);
+    glVertexAttribPointer(c, 2, GL_FLOAT, GL_FALSE, 16, &coords[2]);
+    glEnableVertexAttribArray(p);
+    glEnableVertexAttribArray(c);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  }
   checkGlError();
 }
 

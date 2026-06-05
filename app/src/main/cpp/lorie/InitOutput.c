@@ -104,6 +104,8 @@ typedef struct {
   void *mem;
 } LoriePixmapPriv;
 
+static LoriePixmapPriv *lorieRootWindowPixmapPriv(void);
+
 static struct dri3_screen_info lorieDri3Info;
 
 static struct present_screen_info loriePresentInfo;
@@ -193,9 +195,15 @@ void OsVendorInit(void) {
 
 void lorieActivityConnected(void) {
   lorieSendSharedServerState(pvfb->stateFd);
-  // Enviar o buffer middle (pronto para render) para o renderer
-  if (pvfb->root.buffers[pvfb->root.middleIndex])
-    lorieSendRootWindowBuffer(pvfb->root.buffers[pvfb->root.middleIndex]);
+  if (!pvfb->root.legacyDrawing) {
+    LoriePixmapPriv *priv = lorieRootWindowPixmapPriv();
+    if (priv && priv->buffer)
+      lorieSendRootWindowBuffer(priv->buffer);
+  } else {
+    // Enviar o buffer middle (pronto para render) para o renderer
+    if (pvfb->root.buffers[pvfb->root.middleIndex])
+      lorieSendRootWindowBuffer(pvfb->root.buffers[pvfb->root.middleIndex]);
+  }
 }
 
 static void lorieSwapTripleBuffers(void) {
@@ -507,26 +515,42 @@ static Bool lorieRedraw(__unused ClientPtr pClient, __unused void *closure) {
   priv = lorieRootWindowPixmapPriv();
 
   if (nonEmpty && priv && priv->buffer) {
-    LorieBuffer *middleBuffer = pvfb->root.buffers[pvfb->root.middleIndex];
-    
-    // Desbloquear buffer atual antes de copiar (necessário para sincronização/DMA)
-    LorieBuffer_unlock(priv->buffer);
-    
-    // Copiar conteúdo atualizado do buffer do X para o buffer middle (pronto para render)
-    if (priv->buffer && middleBuffer) {
-      LorieBuffer_copy(priv->buffer, middleBuffer);
-    }
-    
-    // Re-lock do buffer para continuar recebendo updates do X
-    status = LorieBuffer_lock(priv->buffer, NULL, &priv->locked);
-    if (status)
-      FatalError("Failed to lock the surface: %d\n", status);
+    if (pvfb->root.legacyDrawing) {
+      LorieBuffer *middleBuffer = pvfb->root.buffers[pvfb->root.middleIndex];
+      
+      // Desbloquear buffer atual antes de copiar (necessário para sincronização/DMA)
+      LorieBuffer_unlock(priv->buffer);
+      
+      // Copiar conteúdo atualizado do buffer do X para o buffer middle (pronto para render)
+      if (priv->buffer && middleBuffer) {
+        LorieBuffer_copy(priv->buffer, middleBuffer);
+      }
+      
+      // Re-lock do buffer para continuar recebendo updates do X
+      status = LorieBuffer_lock(priv->buffer, NULL, &priv->locked);
+      if (status)
+        FatalError("Failed to lock the surface: %d\n", status);
 
-    DamageEmpty(pvfb->damage);
-    pvfb->state->drawRequested = TRUE;
-    
-    // Swap triple buffers: back -> middle (agora contém último frame)
-    lorieSwapTripleBuffers();
+      DamageEmpty(pvfb->damage);
+      pvfb->state->drawRequested = TRUE;
+      
+      // Swap triple buffers: back -> middle (agora contém último frame)
+      lorieSwapTripleBuffers();
+    } else {
+      // Sem cópias na CPU! Enviar buffer principal diretamente
+      LorieBuffer_unlock(priv->buffer);
+      #if RENDERER_IN_ACTIVITY
+      lorieSendRootWindowBuffer(priv->buffer);
+      #else
+      renderer_set_buffer(priv->buffer);
+      #endif
+      status = LorieBuffer_lock(priv->buffer, NULL, &priv->locked);
+      if (status)
+        FatalError("Failed to lock the surface: %d\n", status);
+
+      DamageEmpty(pvfb->damage);
+      pvfb->state->drawRequested = TRUE;
+    }
   }
 
   if (pvfb->state->drawRequested || pvfb->state->cursor.moved ||
@@ -554,21 +578,27 @@ static CARD32 lorieFramecounter(unused OsTimerPtr timer, unused CARD32 time,
 }
 
 static Bool lorieCreateScreenResources(ScreenPtr pScreen) {
-  // Inicializar triple buffering - criar 3 buffers
-  pvfb->root.backIndex = 0;
-  pvfb->root.middleIndex = 1;
-  pvfb->root.frontIndex = 2;
-  
-  // Criar 3 buffers identicos para triple buffering
-  for (int i = 0; i < 3; i++) {
-    pvfb->root.buffers[i] = LorieBuffer_allocate(
-        pScreen->width, pScreen->height,
-        AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM, LORIEBUFFER_AHARDWAREBUFFER);
-    if (!pvfb->root.buffers[i]) {
-      // Fallback para LORIEBUFFER_REGULAR se AHardwareBuffer falhar
+  if (pvfb->root.legacyDrawing) {
+    // Inicializar triple buffering - criar 3 buffers
+    pvfb->root.backIndex = 0;
+    pvfb->root.middleIndex = 1;
+    pvfb->root.frontIndex = 2;
+    
+    // Criar 3 buffers identicos para triple buffering
+    for (int i = 0; i < 3; i++) {
       pvfb->root.buffers[i] = LorieBuffer_allocate(
           pScreen->width, pScreen->height,
-          AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM, LORIEBUFFER_REGULAR);
+          AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM, LORIEBUFFER_AHARDWAREBUFFER);
+      if (!pvfb->root.buffers[i]) {
+        // Fallback para LORIEBUFFER_REGULAR se AHardwareBuffer falhar
+        pvfb->root.buffers[i] = LorieBuffer_allocate(
+            pScreen->width, pScreen->height,
+            AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM, LORIEBUFFER_REGULAR);
+      }
+    }
+  } else {
+    for (int i = 0; i < 3; i++) {
+      pvfb->root.buffers[i] = NULL;
     }
   }
   
@@ -585,12 +615,21 @@ static Bool lorieCreateScreenResources(ScreenPtr pScreen) {
   DamageRegister(&(*pScreen->GetScreenPixmap)(pScreen)->drawable, pvfb->damage);
   pvfb->fpsTimer = TimerSet(NULL, 0, 5000, lorieFramecounter, pScreen);
 
-  // Enviar o buffer middle para o renderer
+  // Enviar o buffer para o renderer
+  LoriePixmapPriv *priv = lorieRootWindowPixmapPriv();
+  if (priv && priv->buffer) {
 #if RENDERER_IN_ACTIVITY
-  lorieSendRootWindowBuffer(pvfb->root.buffers[pvfb->root.middleIndex]);
+    lorieSendRootWindowBuffer(priv->buffer);
 #else
-  renderer_set_buffer(pvfb->root.buffers[pvfb->root.middleIndex]);
+    renderer_set_buffer(priv->buffer);
 #endif
+  } else {
+#if RENDERER_IN_ACTIVITY
+    lorieSendRootWindowBuffer(pvfb->root.buffers[pvfb->root.middleIndex]);
+#else
+    renderer_set_buffer(pvfb->root.buffers[pvfb->root.middleIndex]);
+#endif
+  }
 
   return TRUE;
 }
@@ -639,22 +678,24 @@ static Bool lorieRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
     }
   }
   
-  // Recriar buffers com novo tamanho
-  for (int i = 0; i < 3; i++) {
-    pvfb->root.buffers[i] = LorieBuffer_allocate(
-        width, height,
-        AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM, LORIEBUFFER_AHARDWAREBUFFER);
-    if (!pvfb->root.buffers[i]) {
+  if (pvfb->root.legacyDrawing) {
+    // Recriar buffers com novo tamanho
+    for (int i = 0; i < 3; i++) {
       pvfb->root.buffers[i] = LorieBuffer_allocate(
           width, height,
-          AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM, LORIEBUFFER_REGULAR);
+          AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM, LORIEBUFFER_AHARDWAREBUFFER);
+      if (!pvfb->root.buffers[i]) {
+        pvfb->root.buffers[i] = LorieBuffer_allocate(
+            width, height,
+            AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM, LORIEBUFFER_REGULAR);
+      }
     }
+    
+    // Resetar índices
+    pvfb->root.backIndex = 0;
+    pvfb->root.middleIndex = 1;
+    pvfb->root.frontIndex = 2;
   }
-  
-  // Resetar índices
-  pvfb->root.backIndex = 0;
-  pvfb->root.middleIndex = 1;
-  pvfb->root.frontIndex = 2;
 
   oldPixmap = pScreen->GetScreenPixmap(pScreen);
   newPixmap = pScreen->CreatePixmap(pScreen, width, height, pScreen->rootDepth,
@@ -677,12 +718,21 @@ static Bool lorieRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
     pScreen->DestroyPixmap(oldPixmap);
   }
 
-  // Enviar buffer middle atualizado para renderer
+  // Enviar buffer atualizado para renderer
+  LoriePixmapPriv *priv = exaGetPixmapDriverPrivate(newPixmap);
+  if (priv && priv->buffer) {
 #if RENDERER_IN_ACTIVITY
-  lorieSendRootWindowBuffer(pvfb->root.buffers[pvfb->root.middleIndex]);
+    lorieSendRootWindowBuffer(priv->buffer);
 #else
-  renderer_set_buffer(pvfb->root.buffers[pvfb->root.middleIndex]);
+    renderer_set_buffer(priv->buffer);
 #endif
+  } else {
+#if RENDERER_IN_ACTIVITY
+    lorieSendRootWindowBuffer(pvfb->root.buffers[pvfb->root.middleIndex]);
+#else
+    renderer_set_buffer(pvfb->root.buffers[pvfb->root.middleIndex]);
+#endif
+  }
 
   pScreen->ResizeWindow(pScreen->root, 0, 0, width, height, NULL);
   RegionReset(&pScreen->root->winSize, &box);
