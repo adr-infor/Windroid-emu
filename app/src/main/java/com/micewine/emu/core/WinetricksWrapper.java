@@ -59,17 +59,18 @@ public class WinetricksWrapper {
 
         String prefix = IS_BOX64.isEmpty() ? "" : IS_BOX64 + " ";
 
-        String setupWrappers = "echo '#!/bin/sh' > " + wineWrapper + "; " +
+        String setupWrappers = "echo '#!/system/bin/sh' > " + wineWrapper + "; " +
                 "echo 'exec " + prefix + realWine + " \"$@\"' >> " + wineWrapper + "; " +
                 "cp " + wineWrapper + " " + wine64Wrapper + "; " +
-                "echo '#!/bin/sh' > " + wineserverWrapper + "; " +
+                "echo '#!/system/bin/sh' > " + wineserverWrapper + "; " +
                 "echo 'exec " + prefix + realWineserver + " \"$@\"' >> " + wineserverWrapper + "; " +
-                "echo '#!/bin/sh' > " + winebootWrapper + "; " +
+                "echo '#!/system/bin/sh' > " + winebootWrapper + "; " +
                 "echo 'exec " + prefix + realWineboot + " \"$@\"' >> " + winebootWrapper + "; " +
-                "echo '#!/bin/sh\n[ \"$1\" = \"--all\" ] || [ \"$1\" = \"-a\" ] && echo \"Architecture: x86_64\nCPU op-mode(s): 32-bit, 64-bit\" || echo \"x86_64\"' > " + lscpuWrapper + "; " +
+                "echo '#!/system/bin/sh\n[ \"$1\" = \"--all\" ] || [ \"$1\" = \"-a\" ] && echo \"Architecture: x86_64\nCPU op-mode(s): 32-bit, 64-bit\" || echo \"x86_64\"' > " + lscpuWrapper + "; " +
                 "echo 'check_certificate = off' > " + homeDir + "/.wgetrc; " +
                 "chmod +x " + wineWrapper + " " + wine64Wrapper + " " + wineserverWrapper + " " + winebootWrapper + " " + lscpuWrapper + " " + usrDir + "/bin/winetricks; ";
 
+        boolean isListCommand = args.contains("list");
         String winetricksCmd = "export WINEPREFIX='" + winePrefixesDir + "/" + winePrefix + "'; " +
                 "export WINE='" + wineWrapper + "'; " +
                 "export WINESERVER='" + wineserverWrapper + "'; " +
@@ -77,9 +78,8 @@ public class WinetricksWrapper {
                 "export WINETRICKS_LATEST_VERSION_CHECK=0; " +
                 "export WINETRICKS_VERSION=20240105; " +
                 "cd " + homeDir + "; " +
-                "wineboot -p; " +
-                "sleep 1; " +
-                "winetricks --unattended " + args;
+                (isListCommand ? "" : "wineboot -p; sleep 1; ") +
+                "sh " + usrDir + "/bin/winetricks --unattended " + args;
 
         return runCommand(getEnv() + setupWrappers + winetricksCmd, true);
     }
