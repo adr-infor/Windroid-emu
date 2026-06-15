@@ -68,6 +68,7 @@ public class WinetricksWrapper {
                 "echo 'exec " + prefix + realWineboot + " \"$@\"' >> " + winebootWrapper + "; " +
                 "echo '#!/system/bin/sh\n[ \"$1\" = \"--all\" ] || [ \"$1\" = \"-a\" ] && echo \"Architecture: x86_64\nCPU op-mode(s): 32-bit, 64-bit\" || echo \"x86_64\"' > " + lscpuWrapper + "; " +
                 "echo 'check_certificate = off' > " + homeDir + "/.wgetrc; " +
+                "[ -f " + usrDir + "/bin/winetricks ] || wget --no-check-certificate -O " + usrDir + "/bin/winetricks https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks || curl -k -o " + usrDir + "/bin/winetricks https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks; " +
                 "chmod +x " + wineWrapper + " " + wine64Wrapper + " " + wineserverWrapper + " " + winebootWrapper + " " + lscpuWrapper + " " + usrDir + "/bin/winetricks; ";
 
         boolean isListCommand = args.contains("list");
