@@ -217,6 +217,9 @@ public class EnvVars {
         vars.add("WINEESYNC=" + strBoolToNum(wineESync));
 
         vars.add("WINE_NO_WINEMENUBUILDER=1");
+        
+        // Disable experimental WOW64 mode for stability on Android/Bionic
+        vars.add("WINE_DISABLE_WOW64=1");
 
         if (useAdrenoTools && adrenoToolsDriverFile != null) {
             vars.add("USE_ADRENOTOOLS=1");
