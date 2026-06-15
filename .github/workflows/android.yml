@@ -9,6 +9,8 @@ on:
       - '**.md'
   workflow_dispatch:
 
+permissions:
+  contents: write
 
 jobs:
   build:
