@@ -963,6 +963,9 @@ public class MainActivity extends AppCompatActivity {
 
         new File(usrDir.getPath() + "/icons").mkdirs();
 
+        // Setup DNS configuration for Steam and other network applications
+        setupDNSConfig();
+
         addGameToList(getString(R.string.desktop_mode_init), getString(R.string.desktop_mode_init), "");
 
         dialogTitleText = getString(R.string.creating_wine_prefix);
@@ -1412,5 +1415,48 @@ public class MainActivity extends AppCompatActivity {
             runCommand("ln -sf '" + sharedFolder + "/Saved Games' '" + localSavedGames + "'", false);
         if (!localDocuments.exists())
             runCommand("ln -sf '" + sharedFolder + "/Documents' '" + localDocuments + "'", false);
+    }
+
+    private void setupDNSConfig() {
+        // Create etc directory if it doesn't exist
+        File etcDir = new File(usrDir, "etc");
+        if (!etcDir.exists()) {
+            etcDir.mkdirs();
+        }
+
+        File resolvConf = new File(etcDir, "resolv.conf");
+        File hostsFile = new File(etcDir, "hosts");
+
+        // Create resolv.conf with DNS servers
+        if (!resolvConf.exists()) {
+            createFallbackDNS(resolvConf);
+        }
+
+        // Create basic hosts file if it doesn't exist
+        if (!hostsFile.exists()) {
+            String hostsContent = "127.0.0.1 localhost\n" +
+                                 "::1 localhost\n";
+            try {
+                java.nio.file.Files.write(hostsFile.toPath(), hostsContent.getBytes());
+                Log.i("MainActivity", "Basic hosts file created");
+            } catch (IOException e) {
+                Log.e("MainActivity", "Failed to create hosts file: " + e.getMessage());
+            }
+        }
+    }
+
+    private void createFallbackDNS(File resolvConf) {
+        // Use Google DNS and Cloudflare DNS as fallback
+        String dnsConfig = "nameserver 8.8.8.8\n" +
+                         "nameserver 8.8.4.4\n" +
+                         "nameserver 1.1.1.1\n" +
+                         "nameserver 1.0.0.1\n";
+        
+        try {
+            java.nio.file.Files.write(resolvConf.toPath(), dnsConfig.getBytes());
+            Log.i("MainActivity", "Fallback DNS configuration created");
+        } catch (IOException e) {
+            Log.e("MainActivity", "Failed to create fallback resolv.conf: " + e.getMessage());
+        }
     }
 }
