@@ -164,6 +164,10 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.net.URL;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
 import android.util.DisplayMetrics;
@@ -962,6 +966,10 @@ public class MainActivity extends AppCompatActivity {
         runCommand("chmod 700 -R " + appRootDir.getPath(), false);
 
         new File(usrDir.getPath() + "/icons").mkdirs();
+        new File(usrDir.getPath() + "/lib").mkdirs();
+
+        // Copy libresolv.so to usr/lib for BOX64 DNS support
+        copyLibresolv();
 
         // Setup DNS configuration for Steam and other network applications
         setupDNSConfig();
@@ -1451,12 +1459,36 @@ public class MainActivity extends AppCompatActivity {
                          "nameserver 8.8.4.4\n" +
                          "nameserver 1.1.1.1\n" +
                          "nameserver 1.0.0.1\n";
-        
+
         try {
             java.nio.file.Files.write(resolvConf.toPath(), dnsConfig.getBytes());
             Log.i("MainActivity", "Fallback DNS configuration created");
         } catch (IOException e) {
             Log.e("MainActivity", "Failed to create fallback resolv.conf: " + e.getMessage());
+        }
+    }
+
+    private void copyLibresolv() {
+        try {
+            String path = "lib/" + Build.SUPPORTED_ABIS[0] + "/libresolv.so";
+            ClassLoader loader = MainActivity.class.getClassLoader();
+            URL res = loader != null ? loader.getResource(path) : null;
+            
+            if (res != null) {
+                String libPath = res.getFile().replace("file:", "").replace("-v8a", "").replace("/base.apk!", "");
+                File srcFile = new File(libPath);
+                File destFile = new File(usrDir, "lib/libresolv.so");
+                
+                if (srcFile.exists() && (!destFile.exists() || srcFile.lastModified() > destFile.lastModified())) {
+                    copyFile(new FileInputStream(srcFile), new FileOutputStream(destFile));
+                    runCommand("chmod 755 " + destFile.getPath(), false);
+                    Log.i("MainActivity", "libresolv.so copied to " + destFile.getPath());
+                }
+            } else {
+                Log.w("MainActivity", "libresolv.so not found in APK");
+            }
+        } catch (Exception e) {
+            Log.e("MainActivity", "Failed to copy libresolv.so: " + e.getMessage());
         }
     }
 }

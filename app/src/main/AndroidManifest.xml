@@ -29,7 +29,8 @@
         android:supportsRtl="true"
         android:hardwareAccelerated="true"
         android:extractNativeLibs="true"
-        android:allowAudioPlaybackCapture="true">
+        android:allowAudioPlaybackCapture="true"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".activities.WelcomeActivity"
             android:theme="@style/Theme.MiceWine"
