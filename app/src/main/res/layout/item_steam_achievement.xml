@@ -4,34 +4,34 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="#252525"
-    android:padding="8dp"
+    android:padding="12dp"
     android:layout_margin="4dp">
 
-    <ImageView
-        android:id="@+id/steamGameImage"
-        android:layout_width="match_parent"
-        android:layout_height="120dp"
-        android:scaleType="centerCrop"
-        android:background="#333333"/>
-
     <TextView
-        android:id="@+id/steamGameName"
+        android:id="@+id/achievementName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Game Name"
+        android:text="Achievement Name"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF" />
+
+    <TextView
+        android:id="@+id/achievementDescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Achievement description"
         android:textSize="12sp"
-        android:textColor="#FFFFFF"
-        android:maxLines="2"
-        android:ellipsize="end"
-        android:layout_marginTop="4dp"/>
+        android:textColor="#AAAAAA"
+        android:layout_marginTop="4dp" />
 
     <TextView
-        android:id="@+id/steamGamePlaytime"
+        android:id="@+id/achievementStatus"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="0h played"
-        android:textSize="10sp"
+        android:text="Locked"
+        android:textSize="12sp"
         android:textColor="#AAAAAA"
-        android:layout_marginTop="2dp"/>
+        android:layout_marginTop="4dp" />
 
 </LinearLayout>

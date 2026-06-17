@@ -82,4 +82,16 @@ public class SteamGame {
         }
         return null;
     }
+
+    public String getFormattedPlaytime() {
+        int hours = playtimeForever / 60;
+        int minutes = playtimeForever % 60;
+        if (hours > 0) {
+            return hours + "h " + minutes + "m played";
+        } else if (minutes > 0) {
+            return minutes + "m played";
+        } else {
+            return "Not played";
+        }
+    }
 }

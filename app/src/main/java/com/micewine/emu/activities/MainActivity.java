@@ -638,6 +638,9 @@ public class MainActivity extends AppCompatActivity {
 
         bottomNavigation.post(() -> bottomNavigation.setSelectedItemId(R.id.nav_shortcuts));
 
+        // Setup Steam login header
+        setupSteamLoginHeader();
+
         androidx.core.content.ContextCompat.registerReceiver(this, receiver, new IntentFilter() {
             {
                 addAction(ACTION_RUN_WINE);
@@ -1425,6 +1428,57 @@ public class MainActivity extends AppCompatActivity {
             runCommand("ln -sf '" + sharedFolder + "/Saved Games' '" + localSavedGames + "'", false);
         if (!localDocuments.exists())
             runCommand("ln -sf '" + sharedFolder + "/Documents' '" + localDocuments + "'", false);
+    }
+
+    private void setupSteamLoginHeader() {
+        com.micewine.emu.steam.SteamPrefs steamPrefs = new com.micewine.emu.steam.SteamPrefs(this);
+        android.widget.Button steamLoginButton = findViewById(R.id.steamLoginButton);
+        android.widget.TextView steamUserName = findViewById(R.id.steamUserName);
+        android.widget.TextView steamStatus = findViewById(R.id.steamStatus);
+        android.widget.ImageView steamAvatar = findViewById(R.id.steamAvatar);
+        android.widget.LinearLayout steamLoginHeader = findViewById(R.id.steamLoginHeader);
+
+        if (steamPrefs.isLoggedIn()) {
+            steamUserName.setText(steamPrefs.getSteamUsername());
+            steamStatus.setText("Logged in");
+            steamLoginButton.setText("Logout");
+            steamAvatar.setVisibility(android.view.View.VISIBLE);
+            // Load avatar from URL if available
+            String avatarUrl = steamPrefs.getSteamAvatarUrl();
+            if (avatarUrl != null && !avatarUrl.isEmpty()) {
+                new com.micewine.emu.steam.SteamImageLoader().loadImage(avatarUrl, steamAvatar);
+            }
+        } else {
+            steamUserName.setText("Not logged in");
+            steamStatus.setText("Tap to login");
+            steamLoginButton.setText("Login");
+            steamAvatar.setVisibility(android.view.View.GONE);
+        }
+
+        // Open profile when clicking on the header (if logged in)
+        steamLoginHeader.setOnClickListener(v -> {
+            if (steamPrefs.isLoggedIn()) {
+                startActivity(new Intent(this, SteamProfileActivity.class));
+            }
+        });
+
+        steamLoginButton.setOnClickListener(v -> {
+            if (steamPrefs.isLoggedIn()) {
+                steamPrefs.clearCredentials();
+                setupSteamLoginHeader();
+                android.widget.Toast.makeText(this, "Logged out", android.widget.Toast.LENGTH_SHORT).show();
+            } else {
+                startActivityForResult(new Intent(this, SteamLoginActivity.class), 1001);
+            }
+        });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1001 && resultCode == RESULT_OK) {
+            setupSteamLoginHeader();
+        }
     }
 
     private void setupDNSConfig() {

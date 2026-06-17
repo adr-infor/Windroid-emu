@@ -10,6 +10,8 @@ import com.micewine.emu.steam.models.SteamGame;
 import com.micewine.emu.steam.models.SteamProfile;
 import com.micewine.emu.steam.models.SteamProfileResponse;
 import com.micewine.emu.steam.models.SteamGamesResponse;
+import com.micewine.emu.steam.models.SteamAchievement;
+import com.micewine.emu.steam.models.SteamAchievementsResponse;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -66,11 +68,11 @@ public class SteamApiClient {
     }
 
     public List<SteamGame> getSteamGames(String apiKey, String steamId) throws IOException {
-        String url = BASE_URL + "IPlayerService/GetOwnedGames/v0001/?key=" + apiKey 
-                + "&steamid=" + steamId 
+        String url = BASE_URL + "IPlayerService/GetOwnedGames/v0001/?key=" + apiKey
+                + "&steamid=" + steamId
                 + "&include_appinfo=true"
                 + "&include_played_free_games=true";
-        
+
         Request request = new Request.Builder()
                 .url(url)
                 .get()
@@ -85,12 +87,42 @@ public class SteamApiClient {
             Log.d(TAG, "Games response: " + responseBody);
 
             SteamGamesResponse gamesResponse = gson.fromJson(responseBody, SteamGamesResponse.class);
-            
-            if (gamesResponse != null && gamesResponse.getResponse() != null 
+
+            if (gamesResponse != null && gamesResponse.getResponse() != null
                     && gamesResponse.getResponse().getGames() != null) {
                 return gamesResponse.getResponse().getGames();
             }
-            
+
+            return new ArrayList<>();
+        }
+    }
+
+    public List<SteamAchievement> getSteamAchievements(String apiKey, String steamId, String appId) throws IOException {
+        String url = BASE_URL + "ISteamUserStats/GetPlayerAchievements/v0001/?key=" + apiKey
+                + "&steamid=" + steamId
+                + "&appid=" + appId
+                + "&l=english";
+
+        Request request = new Request.Builder()
+                .url(url)
+                .get()
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new IOException("Unexpected code " + response);
+            }
+
+            String responseBody = response.body().string();
+            Log.d(TAG, "Achievements response: " + responseBody);
+
+            SteamAchievementsResponse achievementsResponse = gson.fromJson(responseBody, SteamAchievementsResponse.class);
+
+            if (achievementsResponse != null && achievementsResponse.getPlayerstats() != null
+                    && achievementsResponse.getPlayerstats().getAchievements() != null) {
+                return achievementsResponse.getPlayerstats().getAchievements();
+            }
+
             return new ArrayList<>();
         }
     }

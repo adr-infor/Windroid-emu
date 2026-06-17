@@ -12,6 +12,8 @@ public class SteamPrefs {
     private static final String KEY_STEAM_ID = "steam_id";
     private static final String KEY_LOGIN_METHOD = "login_method"; // "credential" or "qr"
     private static final String KEY_AUTO_LOGIN = "auto_login";
+    private static final String KEY_AVATAR_URL = "avatar_url";
+    private static final String KEY_DISPLAY_NAME = "display_name";
 
     private final SharedPreferences prefs;
 
@@ -85,5 +87,38 @@ public class SteamPrefs {
 
     public boolean hasTokens() {
         return getRefreshToken() != null && getAccessToken() != null;
+    }
+
+    public void setAvatarUrl(String url) {
+        prefs.edit().putString(KEY_AVATAR_URL, url).apply();
+    }
+
+    public String getSteamAvatarUrl() {
+        return prefs.getString(KEY_AVATAR_URL, null);
+    }
+
+    public void setDisplayName(String name) {
+        prefs.edit().putString(KEY_DISPLAY_NAME, name).apply();
+    }
+
+    public String getSteamUsername() {
+        String displayName = prefs.getString(KEY_DISPLAY_NAME, null);
+        return displayName != null ? displayName : getUsername();
+    }
+
+    public boolean isLoggedIn() {
+        return hasTokens() && getSteamId() != null;
+    }
+
+    public void clearCredentials() {
+        prefs.edit()
+            .remove(KEY_USERNAME)
+            .remove(KEY_PASSWORD)
+            .remove(KEY_REFRESH_TOKEN)
+            .remove(KEY_ACCESS_TOKEN)
+            .remove(KEY_STEAM_ID)
+            .remove(KEY_AVATAR_URL)
+            .remove(KEY_DISPLAY_NAME)
+            .apply();
     }
 }
