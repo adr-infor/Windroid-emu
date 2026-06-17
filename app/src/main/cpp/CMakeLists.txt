@@ -17,7 +17,7 @@ include(CheckFunctionExists)
 include(CheckTypeSize)
 
 find_package(Python3)
-find_package(BISON REQUIRED)
+find_package(BISON)
 
 function(target_apply_patch patch_target d p)
     execute_process(COMMAND "bash" "-c" "patch -p1 -d ${d} -i ${p} -R --dry-run > /dev/null 2>&1 || patch -p1 -N -d ${d} -i ${p} -r -")
