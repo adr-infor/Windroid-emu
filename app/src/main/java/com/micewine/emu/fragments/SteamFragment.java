@@ -1,13 +1,12 @@
 package com.micewine.emu.fragments;
 
 import android.content.Context;
-import android.content.SharedPreferences;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -21,18 +20,17 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.micewine.emu.R;
+import com.micewine.emu.activities.SteamLoginActivity;
 import com.micewine.emu.adapters.AdapterSteamGame;
-import com.micewine.emu.steam.SteamApiClient;
-import com.micewine.emu.steam.models.SteamGame;
-import com.micewine.emu.steam.models.SteamProfile;
+import com.micewine.emu.steam.SteamDatabase;
+import com.micewine.emu.steam.SteamGame;
+import com.micewine.emu.steam.SteamPrefs;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class SteamFragment extends Fragment {
-    private EditText steamApiKeyInput;
-    private EditText steamIdInput;
-    private Button steamConnectButton;
+    private Button steamLoginButton;
     private Button steamDisconnectButton;
     private View steamLoginSection;
     private View steamProfileSection;
@@ -44,18 +42,20 @@ public class SteamFragment extends Fragment {
     private ProgressBar steamProgressBar;
     private RecyclerView steamGamesRecyclerView;
 
-    private SharedPreferences preferences;
-    private SteamApiClient steamApiClient;
+    private SteamPrefs prefs;
+    private SteamDatabase database;
     private AdapterSteamGame gamesAdapter;
     private List<SteamGame> gamesList = new ArrayList<>();
+
+    private static final int STEAM_LOGIN_REQUEST_CODE = 1001;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_steam, container, false);
 
-        preferences = requireActivity().getSharedPreferences("steam_prefs", Context.MODE_PRIVATE);
-        steamApiClient = new SteamApiClient(requireContext());
+        prefs = new SteamPrefs(requireContext());
+        database = new SteamDatabase(requireContext());
 
         initViews(rootView);
         setupListeners();
@@ -65,9 +65,7 @@ public class SteamFragment extends Fragment {
     }
 
     private void initViews(View rootView) {
-        steamApiKeyInput = rootView.findViewById(R.id.steamApiKeyInput);
-        steamIdInput = rootView.findViewById(R.id.steamIdInput);
-        steamConnectButton = rootView.findViewById(R.id.steamConnectButton);
+        steamLoginButton = rootView.findViewById(R.id.steamLoginButton);
         steamDisconnectButton = rootView.findViewById(R.id.steamDisconnectButton);
         steamLoginSection = rootView.findViewById(R.id.steamLoginSection);
         steamProfileSection = rootView.findViewById(R.id.steamProfileSection);
@@ -85,45 +83,30 @@ public class SteamFragment extends Fragment {
     }
 
     private void setupListeners() {
-        steamConnectButton.setOnClickListener(v -> connectToSteam());
+        steamLoginButton.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), SteamLoginActivity.class);
+            startActivityForResult(intent, STEAM_LOGIN_REQUEST_CODE);
+        });
         steamDisconnectButton.setOnClickListener(v -> disconnectFromSteam());
     }
 
     private void checkExistingConnection() {
-        String apiKey = preferences.getString("steam_api_key", null);
-        String steamId = preferences.getString("steam_id", null);
-
-        if (apiKey != null && steamId != null) {
-            steamApiKeyInput.setText(apiKey);
-            steamIdInput.setText(steamId);
-            loadSteamData(apiKey, steamId);
+        if (prefs.getUsername() != null) {
+            loadSteamData();
         }
     }
 
-    private void connectToSteam() {
-        String apiKey = steamApiKeyInput.getText().toString().trim();
-        String steamId = steamIdInput.getText().toString().trim();
-
-        if (apiKey.isEmpty() || steamId.isEmpty()) {
-            Toast.makeText(requireContext(), "Please enter API Key and Steam ID", Toast.LENGTH_SHORT).show();
-            return;
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, @androidx.annotation.Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == STEAM_LOGIN_REQUEST_CODE && resultCode == android.app.Activity.RESULT_OK) {
+            loadSteamData();
         }
-
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putString("steam_api_key", apiKey);
-        editor.putString("steam_id", steamId);
-        editor.apply();
-
-        loadSteamData(apiKey, steamId);
     }
 
     private void disconnectFromSteam() {
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.clear();
-        editor.apply();
-
-        steamApiKeyInput.setText("");
-        steamIdInput.setText("");
+        prefs.clear();
+        database.clearAllGames();
 
         steamLoginSection.setVisibility(View.VISIBLE);
         steamProfileSection.setVisibility(View.GONE);
@@ -136,20 +119,17 @@ public class SteamFragment extends Fragment {
         gamesAdapter.notifyDataSetChanged();
     }
 
-    private void loadSteamData(String apiKey, String steamId) {
+    private void loadSteamData() {
         showLoading(true);
 
         new Thread(() -> {
             try {
-                SteamProfile profile = steamApiClient.getSteamProfile(apiKey, steamId);
-                List<SteamGame> games = steamApiClient.getSteamGames(apiKey, steamId);
-
+                List<SteamGame> games = database.getAllGames();
+                
                 requireActivity().runOnUiThread(() -> {
-                    if (profile != null) {
-                        showProfile(profile);
-                    }
                     if (games != null && !games.isEmpty()) {
                         showGames(games);
+                        showProfile();
                     } else {
                         showNoGames();
                     }
@@ -164,20 +144,18 @@ public class SteamFragment extends Fragment {
         }).start();
     }
 
-    private void showProfile(SteamProfile profile) {
+    private void showProfile() {
         steamLoginSection.setVisibility(View.GONE);
         steamProfileSection.setVisibility(View.VISIBLE);
 
-        steamPersonaName.setText(profile.getPersonaName());
-        steamIdDisplay.setText("Steam ID: " + profile.getSteamId());
+        String username = prefs.getUsername();
+        String steamId = prefs.getSteamId();
 
-        if (profile.getAvatarFull() != null && !profile.getAvatarFull().isEmpty()) {
-            Glide.with(requireContext())
-                    .load(profile.getAvatarFull())
-                    .placeholder(R.drawable.ic_steam)
-                    .error(R.drawable.ic_steam)
-                    .into(steamAvatar);
-        }
+        steamPersonaName.setText(username != null ? username : "Steam User");
+        steamIdDisplay.setText("Steam ID: " + (steamId != null ? steamId : "Unknown"));
+
+        // Placeholder avatar - pode ser atualizado com avatar real da Steam
+        steamAvatar.setImageResource(R.drawable.ic_steam);
     }
 
     private void showGames(List<SteamGame> games) {

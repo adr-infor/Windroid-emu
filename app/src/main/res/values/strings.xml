@@ -320,8 +320,8 @@
     <string name="enable_vibration_desc">Allow phone to vibrate based on in-game actions</string>
     <string name="steam_title">Steam</string>
     <string name="steam_desc">Steam Integration</string>
-    <string name="steam_login">Login to Steam</string>
-    <string name="steam_api_key">Steam API Key</string>
+    <string name="steam_login">Login with Steam</string>
+    <string name="steam_login_description">Click to login with your Steam account</string>
     <string name="steam_profile">Steam Profile</string>
     <string name="steam_games">My Games</string>
     <string name="steam_library">Steam Library</string>
@@ -331,4 +331,5 @@
     <string name="steam_loading">Loading Steam data...</string>
     <string name="steam_error">Error loading Steam data</string>
     <string name="steam_no_games">No games found in library</string>
+    <string name="steam_login_failed">Login failed. Please try again.</string>
 </resources>

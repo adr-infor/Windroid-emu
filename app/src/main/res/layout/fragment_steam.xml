@@ -28,46 +28,16 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/steam_api_key"
+            android:text="@string/steam_login_description"
             android:textSize="14sp"
             android:textColor="#AAAAAA"
-            android:layout_marginBottom="8dp"/>
-
-        <EditText
-            android:id="@+id/steamApiKeyInput"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Enter your Steam API Key"
-            android:textColor="#FFFFFF"
-            android:textColorHint="#666666"
-            android:background="#333333"
-            android:padding="12dp"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Steam ID (64-bit)"
-            android:textSize="14sp"
-            android:textColor="#AAAAAA"
-            android:layout_marginBottom="8dp"/>
-
-        <EditText
-            android:id="@+id/steamIdInput"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Enter your Steam ID"
-            android:textColor="#FFFFFF"
-            android:textColorHint="#666666"
-            android:background="#333333"
-            android:padding="12dp"
             android:layout_marginBottom="16dp"/>
 
         <Button
-            android:id="@+id/steamConnectButton"
+            android:id="@+id/steamLoginButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/steam_connect"
+            android:text="@string/steam_login"
             android:backgroundTint="#66C0F4"
             android:textColor="#000000"/>
 

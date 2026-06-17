@@ -12,7 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.micewine.emu.R;
-import com.micewine.emu.steam.models.SteamGame;
+import com.micewine.emu.steam.SteamGame;
 
 import java.util.List;
 
@@ -39,10 +39,10 @@ public class AdapterSteamGame extends RecyclerView.Adapter<AdapterSteamGame.Game
         
         holder.gameName.setText(game.getName());
         
-        String iconUrl = game.getIconUrl();
-        if (iconUrl != null && !iconUrl.isEmpty()) {
+        String coverUrl = game.getCoverUrl();
+        if (coverUrl != null && !coverUrl.isEmpty()) {
             Glide.with(activity)
-                    .load(iconUrl)
+                    .load(coverUrl)
                     .placeholder(R.drawable.ic_steam)
                     .error(R.drawable.ic_steam)
                     .into(holder.gameIcon);
