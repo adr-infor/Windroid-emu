@@ -16,7 +16,7 @@ include(CheckSymbolExists)
 include(CheckFunctionExists)
 include(CheckTypeSize)
 
-find_package(Python3 REQUIRED)
+find_package(Python3)
 find_package(BISON REQUIRED)
 
 function(target_apply_patch patch_target d p)
