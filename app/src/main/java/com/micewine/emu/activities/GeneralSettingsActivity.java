@@ -33,6 +33,7 @@ import com.micewine.emu.fragments.SoundSettingsFragment;
 import com.micewine.emu.fragments.WineSettingsFragment;
 import com.micewine.emu.fragments.WinetricksFragment;
 import com.micewine.emu.fragments.GraphicEngineSettingsFragment;
+import com.micewine.emu.fragments.SteamSettingsFragment;
 
 public class GeneralSettingsActivity extends AppCompatActivity {
     private Toolbar generalSettingsToolbar;
@@ -45,6 +46,7 @@ public class GeneralSettingsActivity extends AppCompatActivity {
     private final WineSettingsFragment wineSettingsFragment = new WineSettingsFragment();
     private final WinetricksFragment winetricksFragment = new WinetricksFragment();
     private final GraphicEngineSettingsFragment graphicEngineSettingsFragment = new GraphicEngineSettingsFragment();
+    private final SteamSettingsFragment steamSettingsFragment = new SteamSettingsFragment();
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -71,6 +73,8 @@ public class GeneralSettingsActivity extends AppCompatActivity {
                     fragmentLoader(wineSettingsFragment, false);
                 } else if (preference.equals(getString(R.string.graphic_engine_settings_title))) {
                     fragmentLoader(graphicEngineSettingsFragment, false);
+                } else if (preference.equals(getString(R.string.steam_settings_title))) {
+                    fragmentLoader(steamSettingsFragment, false);
                 } else if (preference.equals(getString(R.string.winetricks_title))) {
                     fragmentLoader(winetricksFragment, false);
                 } else if (preference.equals(getString(R.string.scan_games_title))) {

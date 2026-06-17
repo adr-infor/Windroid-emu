@@ -22,6 +22,7 @@ import com.micewine.emu.steam.adapters.SteamAchievementsAdapter;
 import com.micewine.emu.steam.models.SteamGame;
 import com.micewine.emu.steam.models.SteamProfile;
 import com.micewine.emu.steam.models.SteamAchievement;
+import com.micewine.emu.fragments.SteamSettingsFragment;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +31,6 @@ import java.util.concurrent.Executors;
 
 public class SteamProfileActivity extends AppCompatActivity {
     private static final String TAG = "SteamProfileActivity";
-    private static final String STEAM_API_KEY = "YOUR_STEAM_API_KEY"; // TODO: Replace with actual API key
 
     private SteamPrefs steamPrefs;
     private SteamApiClient steamApiClient;
@@ -119,14 +119,21 @@ public class SteamProfileActivity extends AppCompatActivity {
     private void loadProfileData(String steamId) {
         executor.execute(() -> {
             try {
-                SteamProfile profile = steamApiClient.getSteamProfile(STEAM_API_KEY, steamId);
+                String apiKey = SteamSettingsFragment.getSteamApiKey(this);
+                if (apiKey == null || apiKey.isEmpty()) {
+                    runOnUiThread(() -> 
+                        Toast.makeText(this, "Please set Steam API key in settings", Toast.LENGTH_LONG).show());
+                    return;
+                }
+
+                SteamProfile profile = steamApiClient.getSteamProfile(apiKey, steamId);
                 if (profile != null) {
                     runOnUiThread(() -> {
                         profileName.setText(profile.getPersonaName());
-                        
+
                         String statusText = getStatusText(profile.getPersonaState());
                         profileStatus.setText(statusText);
-                        
+
                         String avatarUrl = profile.getAvatarFull();
                         if (avatarUrl != null && !avatarUrl.isEmpty()) {
                             imageLoader.loadImage(avatarUrl, profileAvatar);
@@ -139,7 +146,7 @@ public class SteamProfileActivity extends AppCompatActivity {
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Failed to load profile", e);
-                runOnUiThread(() -> 
+                runOnUiThread(() ->
                     Toast.makeText(this, "Failed to load profile", Toast.LENGTH_SHORT).show());
             }
         });
@@ -164,17 +171,27 @@ public class SteamProfileActivity extends AppCompatActivity {
 
         executor.execute(() -> {
             try {
-                List<SteamGame> games = steamApiClient.getSteamGames(STEAM_API_KEY, steamId);
+                String apiKey = SteamSettingsFragment.getSteamApiKey(this);
+                if (apiKey == null || apiKey.isEmpty()) {
+                    runOnUiThread(() -> {
+                        gamesProgressBar.setVisibility(View.GONE);
+                        gamesEmptyText.setVisibility(View.VISIBLE);
+                        gamesEmptyText.setText("Please set Steam API key in settings");
+                    });
+                    return;
+                }
+
+                List<SteamGame> games = steamApiClient.getSteamGames(apiKey, steamId);
                 gamesList.clear();
                 gamesList.addAll(games);
 
                 runOnUiThread(() -> {
                     gamesProgressBar.setVisibility(View.GONE);
                     gamesAdapter.notifyDataSetChanged();
-                    
+
                     int count = games.size();
                     gamesCount.setText(count + " games");
-                    
+
                     if (count == 0) {
                         gamesEmptyText.setVisibility(View.VISIBLE);
                     }
@@ -201,7 +218,16 @@ public class SteamProfileActivity extends AppCompatActivity {
         String steamId = steamPrefs.getSteamId();
         executor.execute(() -> {
             try {
-                List<SteamAchievement> achievements = steamApiClient.getSteamAchievements(STEAM_API_KEY, steamId, appId);
+                String apiKey = SteamSettingsFragment.getSteamApiKey(this);
+                if (apiKey == null || apiKey.isEmpty()) {
+                    runOnUiThread(() -> {
+                        achievementsProgressBar.setVisibility(View.GONE);
+                        achievementsTitle.setText("Please set Steam API key in settings");
+                    });
+                    return;
+                }
+
+                List<SteamAchievement> achievements = steamApiClient.getSteamAchievements(apiKey, steamId, appId);
                 achievementsList.clear();
                 achievementsList.addAll(achievements);
 
@@ -216,7 +242,7 @@ public class SteamProfileActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     achievementsProgressBar.setVisibility(View.GONE);
                     achievementsAdapter.notifyDataSetChanged();
-                    
+
                     if (achievements.isEmpty()) {
                         achievementsTitle.setText("No achievements available for this game");
                     } else {

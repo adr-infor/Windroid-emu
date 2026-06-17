@@ -267,6 +267,8 @@
 
     <string name="graphic_engine_settings_title">Graphic Engine</string>
     <string name="graphic_engine_settings_desc">Configure Render Mode, FPS and SR</string>
+    <string name="steam_settings_title">Steam</string>
+    <string name="steam_settings_desc">Configure Steam API key and login settings</string>
     <string name="render_mode_title">Render Mode</string>
     <string name="super_resolution_title">Super Resolution (FSR)</string>
     <string name="color_profile_title">Color Profile</string>
