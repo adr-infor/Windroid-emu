@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#151515"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Steam Login"
+        android:textSize="28sp"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp"
+        android:gravity="center"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Username"
+        android:textSize="14sp"
+        android:textColor="#AAAAAA"
+        android:layout_marginBottom="8dp"/>
+
+    <EditText
+        android:id="@+id/steamUsernameInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Steam username"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#666666"
+        android:background="#333333"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp"
+        android:inputType="text"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Password"
+        android:textSize="14sp"
+        android:textColor="#AAAAAA"
+        android:layout_marginBottom="8dp"/>
+
+    <EditText
+        android:id="@+id/steamPasswordInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Steam password"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#666666"
+        android:background="#333333"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp"
+        android:inputType="textPassword"/>
+
+    <LinearLayout
+        android:id="@+id/steamGuardSection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Steam Guard Code"
+            android:textSize="14sp"
+            android:textColor="#AAAAAA"
+            android:layout_marginBottom="8dp"/>
+
+        <EditText
+            android:id="@+id/steamGuardInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter code from Steam Guard app"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#666666"
+            android:background="#333333"
+            android:padding="16dp"
+            android:layout_marginBottom="8dp"
+            android:inputType="number"/>
+
+        <Button
+            android:id="@+id/steamSubmitGuardButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Submit Code"
+            android:backgroundTint="#66C0F4"
+            android:textColor="#000000"/>
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/steamLoginButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Login"
+        android:backgroundTint="#66C0F4"
+        android:textColor="#000000"
+        android:layout_marginBottom="16dp"/>
+
+    <ProgressBar
+        android:id="@+id/steamProgressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone"/>
+
+    <TextView
+        android:id="@+id/steamStatusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="14sp"
+        android:textColor="#AAAAAA"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:layout_marginTop="8dp"/>
+
+    <Button
+        android:id="@+id/steamCancelButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Cancel"
+        android:backgroundTint="#FF4444"
+        android:textColor="#FFFFFF"
+        android:layout_marginTop="16dp"/>
+
+</LinearLayout>
