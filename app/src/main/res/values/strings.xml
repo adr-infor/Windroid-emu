@@ -318,4 +318,17 @@
     <string name="wine_frameskip_desc">Pula quadros no driver de vídeo para máxima economia de CPU/GPU (recomendado)</string>
     <string name="enable_vibration">Enable Game Vibration</string>
     <string name="enable_vibration_desc">Allow phone to vibrate based on in-game actions</string>
+    <string name="steam_title">Steam</string>
+    <string name="steam_desc">Steam Integration</string>
+    <string name="steam_login">Login to Steam</string>
+    <string name="steam_api_key">Steam API Key</string>
+    <string name="steam_profile">Steam Profile</string>
+    <string name="steam_games">My Games</string>
+    <string name="steam_library">Steam Library</string>
+    <string name="steam_connect">Connect Steam Account</string>
+    <string name="steam_disconnect">Disconnect Steam Account</string>
+    <string name="steam_not_connected">Not connected to Steam</string>
+    <string name="steam_loading">Loading Steam data...</string>
+    <string name="steam_error">Error loading Steam data</string>
+    <string name="steam_no_games">No games found in library</string>
 </resources>

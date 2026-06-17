@@ -81,6 +81,7 @@ dependencies {
     implementation("com.google.code.gson:gson:2.13.1")
     implementation("com.github.vatbub:mslinks:1.0.6.2")
     implementation("com.squareup.okhttp3:okhttp:5.1.0")
+    implementation("com.github.bumptech.glide:glide:4.16.0")
 
     compileOnly project(':app:stub')
 }

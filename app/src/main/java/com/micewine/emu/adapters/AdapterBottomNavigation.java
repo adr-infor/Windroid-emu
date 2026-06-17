@@ -8,6 +8,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
 import com.micewine.emu.fragments.FileManagerFragment;
 import com.micewine.emu.fragments.SettingsFragment;
 import com.micewine.emu.fragments.ShortcutsFragment;
+import com.micewine.emu.fragments.SteamFragment;
 
 public class AdapterBottomNavigation extends FragmentStateAdapter {
     public AdapterBottomNavigation(@NonNull FragmentActivity fragmentActivity) {
@@ -21,12 +22,13 @@ public class AdapterBottomNavigation extends FragmentStateAdapter {
             case 0 -> new ShortcutsFragment();
             case 1 -> new SettingsFragment();
             case 2 -> new FileManagerFragment();
+            case 3 -> new SteamFragment();
             default -> throw new IllegalArgumentException("Invalid Fragment for Position " + position);
         };
     }
 
     @Override
     public int getItemCount() {
-        return 3;
+        return 4;
     }
 }

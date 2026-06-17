@@ -21,6 +21,13 @@
         android:icon="@drawable/ic_folder"
         android:title="@string/file_manager_title">
     </item>
+    <item
+        android:id="@+id/nav_steam"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:icon="@drawable/ic_steam"
+        android:title="@string/steam_title">
+    </item>
 </menu>
 
 
